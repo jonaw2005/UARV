@@ -37,12 +37,37 @@ if (mapOverlay) {
 }
 
 const map = L.map('map').setView([47.66, 9.48], 13);
+const marker = L.marker([47.66, 9.48]).addTo(map);
 
 // OpenStreetMap Layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
 }).addTo(map);
+
+
+
+
+function update_Map(latValue, lonValue) {
+  if (!map) {
+    return;
+  }
+
+  map.setView([latValue, lonValue], 15, { animate: true });
+  marker.setLatLng([latValue, lonValue]);
+}
+
+
+
+const refreshLocationBtn = document.getElementById('refreshLocationBtn');
+if (refreshLocationBtn) {
+  refreshLocationBtn.addEventListener('click', async () => {
+    const { lat: newLat, lon: newLon } = await get_Location();
+    if (newLat != null && newLon != null) {
+      update_Map(newLat, newLon);
+    }
+  });
+}
 
 
 
