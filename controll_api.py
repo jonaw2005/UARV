@@ -9,12 +9,19 @@ from flask_socketio import SocketIO
 import base64
 import time
 import atexit
+import logging
 from pymavlink import mavutil
 
 from mav_bridge import MAVBridge
 
+
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s"
+)
 
 started = False
 running = True
@@ -120,6 +127,10 @@ def generate_video():
 
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@app.before_request
+def log_request():
+    logging.info(f"{request.remote_addr} {request.method} {request.path}")
 
 @app.route('/api/status')
 def status():
