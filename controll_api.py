@@ -64,6 +64,9 @@ def stream_video():
             success, frame = camera.read()
             if not success:
                 #print("Failed to read frame")
+                camera.release()
+                time.sleep(1)  # Wait a bit before trying to reconnect
+                camera.open(cam_index)
                 continue
 
             _, buffer = cv2.imencode('.jpg', frame)
