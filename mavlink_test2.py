@@ -52,7 +52,7 @@ try:
     last_time = time.time()
 
     while True:
-        msg = master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
+        msg = master.recv_match(type='PARAM_VALUE', blocking=True)
 
         if msg:
             name = msg.param_id.decode().strip('\x00')
