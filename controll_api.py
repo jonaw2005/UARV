@@ -404,6 +404,14 @@ def upload_mission():
     })
 
 
+@app.route("/mission_download", methods=["GET"])
+def download_mission():
+
+    future = run_task(bridge.download_mission)
+    mission = future.result()
+    return jsonify({
+        "mission": mission
+    }), 202
 
 
 

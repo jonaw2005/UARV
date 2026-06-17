@@ -509,6 +509,150 @@ class MAVBridge:
         )
 
 
+ # --------------------------------------------------
+    # DOWNLOAD MISSION FROM AUTOPILOT
+    # --------------------------------------------------
+    def download_mission(self):
+        """
+        Holt komplette Mission vom Pixhawk (ArduPlane)
+        und gibt sie als strukturierte Liste zurück
+        """
+
+        mission = []
+
+        # 1. Request Mission List
+        self.master.mav.mission_request_list_send(
+            self.master.target_system,
+            self.master.target_component
+        )
+
+        # 2. Warten auf Anzahl
+        msg = self.master.recv_match(
+            type="MISSION_COUNT",
+            blocking=True,
+            timeout=5
+        )
+
+        if not msg:
+            raise TimeoutError("No MISSION_COUNT received")
+
+        count = msg.count
+
+        # 3. Items einzeln anfordern
+        for seq in range(count):
+
+            self.master.mav.mission_request_int_send(
+                self.master.target_system,
+                self.master.target_component,
+                seq
+            )
+
+            item = self.master.recv_match(
+                type=["MISSION_ITEM_INT", "MISSION_ITEM"],
+                blocking=True,
+                timeout=5
+            )
+
+            if not item:
+                raise TimeoutError(f"No mission item for seq {seq}")
+
+            mission.append(self._parse_mission_item(item))
+
+        return mission
+
+    # --------------------------------------------------
+    # INTERNAL: MAVLink → JSON
+    # --------------------------------------------------
+    def _parse_mission_item(self, item):
+
+        cmd = item.command
+
+        # WAYPOINT
+        if cmd == mu.mavlink.MAV_CMD_NAV_WAYPOINT:
+            return {
+                "type": "waypoint",
+                "lat": item.x / 1e7 if hasattr(item, "x") else item.x,
+                "lon": item.y / 1e7 if hasattr(item, "y") else item.y,
+                "alt": item.z
+            }
+
+        # TAKEOFF
+        elif cmd == mu.mavlink.MAV_CMD_NAV_TAKEOFF:
+            return {
+                "type": "action",
+                "action": "takeoff",
+                "param": item.z
+            }
+
+        # RTL
+        elif cmd == mu.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH:
+            return {
+                "type": "action",
+                "action": "rtl"
+            }
+
+        # LAND
+        elif cmd == mu.mavlink.MAV_CMD_NAV_LAND:
+            return {
+                "type": "action",
+                "action": "land"
+            }
+
+        # LOITER TIME
+        elif cmd == mu.mavlink.MAV_CMD_NAV_LOITER_TIME:
+            return {
+                "type": "action",
+                "action": "loiter",
+                "param": item.param1
+            }
+
+        # SPEED
+        elif cmd == mu.mavlink.MAV_CMD_DO_CHANGE_SPEED:
+            return {
+                "type": "action",
+                "action": "set_speed",
+                "param": item.param2
+            }
+
+        # ALT CHANGE
+        elif cmd == mu.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE:
+            return {
+                "type": "action",
+                "action": "change_alt",
+                "param": item.param1
+            }
+
+        # DELAY
+        elif cmd == mu.mavlink.MAV_CMD_NAV_DELAY:
+            return {
+                "type": "action",
+                "action": "delay",
+                "param": item.param1
+            }
+
+        # YAW
+        elif cmd == mu.mavlink.MAV_CMD_CONDITION_YAW:
+            return {
+                "type": "action",
+                "action": "condition_yaw",
+                "param": item.param1
+            }
+
+        # LAND START
+        elif cmd == mu.mavlink.MAV_CMD_DO_LAND_START:
+            return {
+                "type": "action",
+                "action": "land_start"
+            }
+
+        # UNKNOWN
+        return {
+            "type": "unknown",
+            "command": cmd
+        }
+
+
+
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     bridge.connect()
