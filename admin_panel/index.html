@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UARV Admin Panel</title>
+    <link rel="stylesheet" href="stylesheet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-sA+e2eIuM0B6NEcXh2aG0NVK/2Qq8L+6LZ6S0gJf10w="
+      crossorigin=""
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="main-grid">
+        <section class="panel" id="camera-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Live Camera</h1>
+              <p>Streaming from your Web API</p>
+            </div>
+            <span id="camera-status">Loading…</span>
+          </div>
+          <div class="camera-frame">
+            <video id="cameraVideo" autoplay muted playsinline></video>
+            <div class="panel-overlay hidden" id="cameraOverlay">
+              Unable to load the camera stream.
+            </div>
+          </div>
+          <div class="info-strip">
+            <div class="info-card">
+              <strong>Stream URL</strong>
+              <span id="cameraUrl">/api/camera</span>
+            </div>
+            <div class="info-card">
+              <strong>Status</strong>
+              <span id="cameraState">Connecting</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="map-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Interactive Map</h1>
+              <p>Centered on GPS coordinates from your Web API</p>
+            </div>
+            <span id="map-status">Loading…</span>
+          </div>
+          <div class="map-panel-body">
+            <div id="map"></div>
+            <div class="panel-overlay hidden" id="mapOverlay">
+              Unable to load GPS coordinates.
+            </div>
+          </div>
+          <div class="info-strip">
+            <div class="info-card">
+              <strong>Latitude</strong>
+              <span id="latitudeValue">—</span>
+            </div>
+            <div class="info-card">
+              <strong>Longitude</strong>
+              <span id="longitudeValue">—</span>
+            </div>
+            <div class="info-card">
+              <strong>Last updated</strong>
+              <span id="gpsUpdated">—</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel-actions">
+          <div class="panel-header">
+            <div>
+              <h1>Controls</h1>
+              <p>Action buttons will appear here</p>
+            </div>
+          </div>
+          <div class="actions-grid">
+            <button class="action-btn" disabled>Button 1</button>
+            <button class="action-btn" disabled>Button 2</button>
+            <button class="action-btn" disabled>Button 3</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-p8Q0Bmyg9bYB8hz4xrTu8FmO9ZQpFA7SMtaYjb9bbG0="
+      crossorigin=""
+    ></script>
+    <script src="camera.js"></script>
+    <script src="map.js"></script>
+    <script src="buttons.js"></script>
+  </body>
+</html>
