@@ -25,6 +25,36 @@ const waypoints = [];
 const missionItems = [];
 let selectedMarker = null;
 let editingIndex = null;
+let missionPolyline = null;
+
+function createNumberedMarker(lat, lon, number) {
+  const icon = L.divIcon({
+    className: 'mission-waypoint-marker',
+    html: `<div class="marker-number">${number}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+  return L.marker([lat, lon], { icon });
+}
+
+function updateMissionPolyline() {
+  if (missionPolyline) {
+    plannerMap.removeLayer(missionPolyline);
+    missionPolyline = null;
+  }
+
+  const waypointCoords = missionItems
+    .filter((item) => item.type === 'waypoint')
+    .map((item) => [item.lat, item.lon]);
+
+  if (waypointCoords.length > 1) {
+    missionPolyline = L.polyline(waypointCoords, {
+      color: '#ff3333',
+      weight: 2,
+      opacity: 0.7,
+    }).addTo(plannerMap);
+  }
+}
 
 function refreshMissionList() {
   missionList.innerHTML = '';
@@ -60,6 +90,31 @@ function refreshMissionList() {
     setupMissionDragEvents(row);
     missionList.appendChild(row);
   });
+
+  updateMissionMarkersAndPolyline();
+}
+
+function updateMissionMarkersAndPolyline() {
+  // Clear old mission markers
+  missionItems.forEach((item) => {
+    if (item.missionMarker) {
+      plannerMap.removeLayer(item.missionMarker);
+    }
+  });
+
+  // Create new numbered markers
+  let waypointCount = 1;
+  missionItems.forEach((item) => {
+    if (item.type === 'waypoint') {
+      const marker = createNumberedMarker(item.lat, item.lon, waypointCount);
+      marker.addTo(plannerMap);
+      item.missionMarker = marker;
+      waypointCount++;
+    }
+  });
+
+  // Update polyline
+  updateMissionPolyline();
 }
 
 function moveMissionItem(fromIndex, toIndex) {
@@ -125,15 +180,13 @@ function refreshWaypointList() {
 }
 
 function addWaypoint(lat, lon) {
-  const marker = L.marker([lat, lon]).addTo(plannerMap);
-  const waypoint = { lat, lon, marker };
+  const waypoint = { lat, lon };
   waypoints.push(waypoint);
   missionItems.push({
     type: 'waypoint',
-    title: `Waypoint ${missionItems.length + 1}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+    title: `Waypoint ${missionItems.filter((item) => item.type === 'waypoint').length + 1}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
     lat,
     lon,
-    marker,
   });
   refreshWaypointList();
   refreshMissionList();
@@ -230,18 +283,9 @@ placeWaypointBtn.addEventListener('click', () => {
     if (editingIndex !== null) {
       // Update existing waypoint
       const item = missionItems[editingIndex];
-      if (item.marker) plannerMap.removeLayer(item.marker);
-      const marker = L.marker([lat, lon]).addTo(plannerMap);
       item.lat = lat;
       item.lon = lon;
-      item.marker = marker;
       item.title = `Waypoint ${editingIndex + 1}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-      if (missionItems[editingIndex].waypoint) {
-        const wpIndex = waypoints.findIndex((wp) => wp === missionItems[editingIndex].waypoint);
-        if (wpIndex !== -1) {
-          waypoints[wpIndex] = { lat, lon, marker };
-        }
-      }
       editingIndex = null;
     } else {
       // Create new waypoint

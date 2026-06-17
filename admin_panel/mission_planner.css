@@ -193,6 +193,27 @@
   margin: 0;
 }
 
+.mission-waypoint-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2d6bff, #1fb4ff);
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.marker-number {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mission-waypoint-marker:hover {
+  filter: brightness(1.2);
+}
+
 @media (max-width: 1024px) {
   .planner-shell {
     grid-template-columns: 1fr;
