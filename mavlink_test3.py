@@ -10,6 +10,11 @@ master.wait_heartbeat()
 print("Heartbeat empfangen!")
 
 # Hauptloop: MAVLink Nachrichten lesen
+
+beat = 0
+status = 0
+gps = 0
+
 while True:
     msg = master.recv_match(blocking=True)
 
@@ -19,14 +24,17 @@ while True:
     msg_type = msg.get_type()
 
     # Nur interessante Nachrichten anzeigen
-    if msg_type == "HEARTBEAT":
+    if msg_type == "HEARTBEAT" and beat == 0:
         print("Heartbeat OK")
+        beat = 1
 
-    elif msg_type == "SYS_STATUS":
+    elif msg_type == "SYS_STATUS" and status == 0:
         print("Systemstatus:", msg)
+        status = 1
 
-    elif msg_type == "GLOBAL_POSITION_INT":
+    elif msg_type == "GLOBAL_POSITION_INT" and gps == 0:
         print("Position:", msg.lat/1e7, msg.lon/1e7, "Alt:", msg.relative_alt/1000.0, "m")
+        gps = 1
 
     else:
         # optional: andere Nachrichten ignorieren oder debuggen
