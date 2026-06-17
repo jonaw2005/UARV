@@ -4,6 +4,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(plannerMap);
 
 const waypointList = document.getElementById('waypointList');
+const missionList = document.getElementById('missionList');
 const addWaypointBtn = document.getElementById('addWaypointBtn');
 const clearWaypointsBtn = document.getElementById('clearWaypointsBtn');
 const uploadMissionBtn = document.getElementById('uploadMissionBtn');
@@ -14,7 +15,30 @@ const placeWaypointBtn = document.getElementById('placeWaypointBtn');
 const cancelWaypointBtn = document.getElementById('cancelWaypointBtn');
 
 const waypoints = [];
+const missionItems = [];
 let selectedMarker = null;
+
+function refreshMissionList() {
+  missionList.innerHTML = '';
+  if (!missionItems.length) {
+    missionList.innerHTML = '<div class="mission-item">No mission items yet.</div>';
+    return;
+  }
+
+  missionItems.forEach((item, index) => {
+    const row = document.createElement('div');
+    row.className = 'mission-item';
+    row.innerHTML = `
+      <span>${index + 1}. ${item.title}</span>
+      <button data-index="${index}">Go</button>
+    `;
+    row.querySelector('button').addEventListener('click', () => {
+      plannerMap.setView([item.lat, item.lon], 16);
+      selectedMarker = item.marker;
+    });
+    missionList.appendChild(row);
+  });
+}
 
 function refreshWaypointList() {
   waypointList.innerHTML = '';
@@ -35,8 +59,17 @@ function refreshWaypointList() {
 
 function addWaypoint(lat, lon) {
   const marker = L.marker([lat, lon]).addTo(plannerMap);
-  waypoints.push({ lat, lon, marker });
+  const waypoint = { lat, lon, marker };
+  waypoints.push(waypoint);
+  missionItems.push({
+    type: 'waypoint',
+    title: `Waypoint ${missionItems.length + 1}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+    lat,
+    lon,
+    marker,
+  });
   refreshWaypointList();
+  refreshMissionList();
 }
 
 plannerMap.on('click', (event) => {
@@ -73,10 +106,15 @@ cancelWaypointBtn.addEventListener('click', () => {
 clearWaypointsBtn.addEventListener('click', () => {
   waypoints.forEach((wp) => plannerMap.removeLayer(wp.marker));
   waypoints.length = 0;
+  missionItems.length = 0;
   refreshWaypointList();
+  refreshMissionList();
 });
 
 uploadMissionBtn.addEventListener('click', () => {
-  console.log('Upload mission', waypoints);
-  alert(`Mission uploaded with ${waypoints.length} waypoint(s).`);
+  console.log('Upload mission', missionItems);
+  alert(`Mission uploaded with ${missionItems.length} waypoint(s).`);
 });
+
+refreshWaypointList();
+refreshMissionList();
