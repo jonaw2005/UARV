@@ -23,6 +23,26 @@ state_lock = threading.Lock()
 
 camera = cv2.VideoCapture(0)
 
+def generate_frames():
+    while True:
+        success, frame = camera.read()
+
+        if not success:
+            break
+
+        # Frame zu JPEG encoden
+        ret, buffer = cv2.imencode('.jpg', frame)
+
+        if not ret:
+            continue
+
+        frame_bytes = buffer.tobytes()
+
+        # MJPEG Stream Format
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+
 def generate_video():
     while True:
         success, frame = camera.read()
@@ -54,7 +74,8 @@ def index():
 
 @app.route('/video')
 def video():
-	return Response(generate_video(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
+	#return Response(generate_video(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
 
 
 def run_task(fn, *args, **kwargs):
