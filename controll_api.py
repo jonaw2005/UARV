@@ -5,6 +5,8 @@ import cv2
 from flask_socketio import SocketIO
 import base64
 import time
+import eventlet
+eventlet.monkey_patch()
 
 from mav_bridge import MAVBridge
 
