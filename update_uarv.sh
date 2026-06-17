@@ -35,7 +35,7 @@ error() {
 }
 
 # --------------------------------------------------
-# FINAL PROGRESS BAR (ALWAYS LAST LINE)
+# PROGRESS BAR (MUST BE LAST OUTPUT)
 # --------------------------------------------------
 
 progress_bar() {
@@ -77,7 +77,7 @@ STATUS=false
 # ARGUMENTS
 # --------------------------------------------------
 
-section "ARGUMENTS"
+section "ARGUMENT PARSING"
 
 for arg in "$@"; do
     case "$arg" in
@@ -108,8 +108,8 @@ if $STATUS; then
     section "STATUS"
 
     if [ -d "$APP_DIR/.git" ]; then
-        info "Repository:"
         cd "$APP_DIR"
+        info "Repository"
         echo " Path: $APP_DIR"
         echo " Branch: $(git branch --show-current)"
         echo " Commit: $(git log -1 --oneline)"
@@ -120,7 +120,7 @@ if $STATUS; then
     echo
 
     if [ -d "$VENV_DIR" ]; then
-        info "Venv:"
+        info "Venv"
         "$VENV_DIR/bin/python" --version
     else
         error "Venv missing"
@@ -181,26 +181,48 @@ section "DEPLOYMENT START"
 info "Starting deployment..."
 
 # --------------------------------------------------
-# STOP SERVICE (IMPORTANT)
+# STOP UARV API (WS SAFE)
 # --------------------------------------------------
 
-section "STOP UARV API"
+section "STOP UARV API (WEBSOCKET SAFE)"
+
+info "Stopping service gracefully..."
+
+sudo systemctl stop uarv-api
+
+TIMEOUT=15
+COUNTER=0
+
+while systemctl is-active --quiet uarv-api; do
+    sleep 1
+    COUNTER=$((COUNTER+1))
+
+    if [ $COUNTER -ge $TIMEOUT ]; then
+        error "Graceful stop timeout"
+        break
+    fi
+done
 
 if systemctl is-active --quiet uarv-api; then
-    sudo systemctl stop uarv-api
-    success "uarv-api stopped"
-else
-    info "uarv-api not running"
+    error "Forcing SIGTERM..."
+    sudo systemctl kill -s SIGTERM uarv-api
+    sleep 5
 fi
 
-systemctl is-active --quiet uarv-api && {
-    error "Failed to stop uarv-api"
+if systemctl is-active --quiet uarv-api; then
+    error "Forcing SIGKILL..."
+    sudo systemctl kill -s SIGKILL uarv-api
+    sleep 2
+fi
+
+if systemctl is-active --quiet uarv-api; then
+    error "Cannot stop service"
     progress_bar 100
     echo ""
     exit 1
-}
+fi
 
-success "Service fully stopped"
+success "uarv-api fully stopped"
 
 # --------------------------------------------------
 # REPOSITORY
@@ -209,8 +231,8 @@ success "Service fully stopped"
 section "REPOSITORY"
 
 if [ -d "$APP_DIR/.git" ] && ! $FORCE; then
-    info "Pull repo"
     cd "$APP_DIR"
+    info "Git pull"
     git pull origin main
 else
     info "Clone repo"
@@ -286,7 +308,7 @@ else
 fi
 
 # --------------------------------------------------
-# DEPLOY
+# DEPLOY FRONTEND
 # --------------------------------------------------
 
 section "DEPLOY FRONTEND"
@@ -302,10 +324,10 @@ sudo chmod -R 755 "$WEB_DIR"
 success "Frontend deployed"
 
 # --------------------------------------------------
-# RESTART SERVICE
+# RESTART UARV API
 # --------------------------------------------------
 
-section "UARV API RESTART"
+section "UARV API START"
 
 if systemctl is-active --quiet uarv-api; then
     sudo systemctl restart uarv-api
@@ -332,16 +354,16 @@ success "Nginx reloaded"
 # DONE
 # --------------------------------------------------
 
-section "DEPLOYMENT DONE"
+section "DEPLOYMENT COMPLETE"
 
-success "Deployment completed"
+success "Deployment finished"
 
 if [ -d "$BACKUP_TARGET" ]; then
     info "Backup: $BACKUP_TARGET"
 fi
 
 # --------------------------------------------------
-# FINAL PROGRESS BAR (ABSOLUTE LAST OUTPUT)
+# FINAL OUTPUT (ABSOLUTE LAST LINE)
 # --------------------------------------------------
 
 progress_bar 100
