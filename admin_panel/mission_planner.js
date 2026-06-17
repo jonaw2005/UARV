@@ -91,6 +91,10 @@ function refreshMissionList() {
       }
     });
     row.querySelector('.remove-btn').addEventListener('click', () => {
+      // Remove marker from map if it exists
+      if (item.missionMarker) {
+        plannerMap.removeLayer(item.missionMarker);
+      }
       missionItems.splice(index, 1);
       refreshMissionList();
     });
