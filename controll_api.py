@@ -1,6 +1,7 @@
 from flask import Flask, Response, jsonify, request
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import cv2
 
 try:
     from videostream.stream_api import generate
@@ -25,6 +26,21 @@ state = {
 state_lock = threading.Lock()
 
 
+camera = cv2.VideoCapture(0)
+
+def generate_video():
+    while True:
+        success, frame = camera.read()
+        if not success:
+            break
+
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+
 @app.route('/')
 def index():
 	return """
@@ -39,11 +55,8 @@ def index():
 
 @app.route('/video')
 def video():
-	if generate is None:
-		return jsonify({'error': 'video stream not available'}), 503
-	return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
+	return Response(generate(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
 
 
 def run_task(fn, *args, **kwargs):
@@ -62,8 +75,8 @@ def disarm():
     return jsonify({'status': 'disarming requested', 'task_id': id(future)})
 
 
-@app.route('/mode', methods=['POST'])
-def mode():
+@app.route('/change_mode', methods=['POST'])
+def change_mode():
     data = request.get_json(force=True)
     if not data or 'mode' not in data:
         return jsonify({'error': 'mode is required'}), 400
@@ -72,8 +85,8 @@ def mode():
     return jsonify({'status': 'mode change requested', 'mode': data['mode'], 'task_id': id(future)})
 
 
-@app.route('/velocity', methods=['POST'])
-def velocity():
+@app.route('/set_velocity', methods=['POST'])
+def set_velocity():
     data = request.get_json(force=True)
     if not data or any(k not in data for k in ('vx', 'vy', 'vz')):
         return jsonify({'error': 'vx, vy, vz are required'}), 400
@@ -128,8 +141,8 @@ def get_all_params():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/telemetry', methods=['GET'])
-def telemetry():
+@app.route('/get_telemetry', methods=['GET'])
+def get_telemetry():
     try:
         # run telemetry collection in background to avoid blocking server threads
         future = run_task(bridge.get_telemetry)
@@ -147,9 +160,13 @@ def telemetry():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({'status': 'ok'})
+@app.route('/get_health', methods=['GET'])
+def get_health():
+    try:
+        health = bridge.get_health()
+        return jsonify(health)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 

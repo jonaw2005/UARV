@@ -23,6 +23,18 @@ class MAVBridge:
         self.source_system = source_system
         self.target_system = target_system
         self.target_component = target_component
+        self._master_lock = threading.Lock()
+        self.health = {
+            'connected': False,
+            'battery_voltage': None,
+            'battery_current': None,
+            'battery_remaining': None,
+            'gps_fix_type': None,
+            'satellites_visible': None,
+            'last_heartbeat': None,
+            'system_status': None,
+        }
+        self._health_thread = None
 
 
     def connect(self, timeout=30):
@@ -32,6 +44,11 @@ class MAVBridge:
             source_system=self.source_system,
             autoreconnect=True,
         )
+        # mark connected and start background health thread
+        self.health['connected'] = True
+        self.running = True
+        self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
+        self._health_thread.start()
 
 
     def send_command_long(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
@@ -123,8 +140,9 @@ class MAVBridge:
         last_request_time = time.time()
         param_request_sent = True
 
-        while True:
-            msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=1)
+        with self._master_lock:
+            while True:
+                msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=1)
 
             if msg:
                 # param_id may be bytes (py3) or already str depending on pymavlink version
@@ -136,59 +154,63 @@ class MAVBridge:
                 last_param_time = time.time()
                 #print(msg.param_id)
 
-            # Retry parameter request if no response for 3 seconds
-            if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
-                if len(params) == 0:  # No parameters received yet, retry
-                    print("No parameters received, retrying request...")
-                    self.master.mav.param_request_list_send(
-                        self.master.target_system,
-                        self.master.target_component
-                    )
-                    last_request_time = time.time()
-                else:
-                    # Got some parameters but no more for 3 seconds, stop
+                # Retry parameter request if no response for 3 seconds
+                if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
+                    if len(params) == 0:  # No parameters received yet, retry
+                        print("No parameters received, retrying request...")
+                        self.master.mav.param_request_list_send(
+                            self.master.target_system,
+                            self.master.target_component
+                        )
+                        last_request_time = time.time()
+                    else:
+                        # Got some parameters but no more for 3 seconds, stop
+                        break
+                
+                # Stop if 5 seconds of no new parameters after receiving at least one
+                if len(params) > 0 and time.time() - last_param_time > 5:
                     break
-            
-            # Stop if 5 seconds of no new parameters after receiving at least one
-            if len(params) > 0 and time.time() - last_param_time > 5:
-                break
 
         print("Fertig:", len(params), "Parameter")
         return params
 
 
     def get_param(self, name):
-        
-        self.master.mav.param_request_read_send(
-            self.master.target_system,
-            self.master.target_component,
-            name.encode('utf-8'),
-            -1
-        )
+        with self._master_lock:
+            self.master.mav.param_request_read_send(
+                self.master.target_system,
+                self.master.target_component,
+                name.encode('utf-8'),
+                -1
+            )
 
-        while True:
-            msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
-            if msg:
-                print("Received PARAM_VALUE:", msg)
-                if isinstance(msg.param_id, (bytes, bytearray)):
-                    param_name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
+            while True:
+                msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
+                if msg:
+                    # print("Received PARAM_VALUE:", msg)
+                    if isinstance(msg.param_id, (bytes, bytearray)):
+                        param_name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
+                    else:
+                        param_name = str(msg.param_id).rstrip('\x00')
+                    if param_name == name:
+                        return msg.param_value
                 else:
-                    param_name = str(msg.param_id).rstrip('\x00')
-                if param_name == name:
-                    return msg.param_value
-            else:
-                raise TimeoutError(f"Timeout waiting for parameter {name}")
+                    raise TimeoutError(f"Timeout waiting for parameter {name}")
         
 
     def get_telemetry(self, timeout=5):
         """Request current telemetry and return a JSON-friendly dict."""
-        self.master.mav.request_data_stream_send(
-            self.master.target_system,
-            self.master.target_component,
-            mu.mavlink.MAV_DATA_STREAM_ALL,
-            1,
-            1,
-        )
+        with self._master_lock:
+            try:
+                self.master.mav.request_data_stream_send(
+                    self.master.target_system,
+                    self.master.target_component,
+                    mu.mavlink.MAV_DATA_STREAM_ALL,
+                    1,
+                    1,
+                )
+            except Exception:
+                pass
 
         telemetry = {
             'lat': None,
@@ -210,8 +232,10 @@ class MAVBridge:
         }
 
         start = time.time()
-        while time.time() - start < timeout:
-            msg = self.master.recv_match(blocking=True, timeout=0.5)
+        end = start + timeout
+        while time.time() < end:
+            with self._master_lock:
+                msg = self.master.recv_match(blocking=True, timeout=0.5)
             if msg is None:
                 continue
 
@@ -247,6 +271,52 @@ class MAVBridge:
                 telemetry['load'] = msg.load / 10.0 if msg.load is not None else None
 
         return telemetry
+
+    def _health_loop(self):
+        # continuously collect a small set of status messages into self.health
+        while self.running:
+            try:
+                with self._master_lock:
+                    try:
+                        self.master.mav.request_data_stream_send(
+                            self.master.target_system,
+                            self.master.target_component,
+                            mu.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,
+                            1,
+                            1,
+                        )
+                    except Exception:
+                        pass
+
+                    start = time.time()
+                    # collect messages for a short window
+                    while time.time() - start < 0.8:
+                        msg = self.master.recv_match(blocking=True, timeout=0.3)
+                        if not msg:
+                            continue
+                        t = msg.get_type()
+                        if t == 'SYS_STATUS':
+                            if getattr(msg, 'voltage_battery', None) is not None:
+                                self.health['battery_voltage'] = msg.voltage_battery / 1000.0
+                            if getattr(msg, 'current_battery', None) is not None:
+                                self.health['battery_current'] = msg.current_battery / 100.0
+                            if getattr(msg, 'battery_remaining', None) is not None:
+                                self.health['battery_remaining'] = msg.battery_remaining
+                            self.health['system_status'] = getattr(msg, 'system_status', None)
+                        elif t == 'GPS_RAW_INT':
+                            self.health['gps_fix_type'] = getattr(msg, 'fix_type', None)
+                            self.health['satellites_visible'] = getattr(msg, 'satellites_visible', None)
+                        elif t == 'HEARTBEAT':
+                            self.health['last_heartbeat'] = time.time()
+                            self.health['system_status'] = getattr(msg, 'system_status', self.health.get('system_status'))
+            except Exception:
+                # swallow errors to keep thread alive
+                pass
+            time.sleep(1.0)
+
+    def get_health(self):
+        # return a shallow copy of health dictionary
+        return dict(self.health)
         
 
 if __name__ == "__main__":
