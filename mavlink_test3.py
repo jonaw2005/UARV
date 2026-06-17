@@ -15,6 +15,8 @@ beat = 0
 status = 0
 gps = 0
 
+master.mav.param_request_list_send(1, 1)
+
 while True:
     msg = master.recv_match(blocking=True)
 
@@ -36,8 +38,8 @@ while True:
         print("Position:", msg.lat/1e7, msg.lon/1e7, "Alt:", msg.relative_alt/1000.0, "m")
         gps = 1
 
-    else:
-        # optional: andere Nachrichten ignorieren oder debuggen
-        print(f"Empfangen: {msg_type} - {msg}")
+    elif msg_type == "PARAM_VALUE":
+        # optional: Parameterwerte anzeigen
+        print(f"Parameter: {msg.param_id} = {msg.param_value}")
 
-    master.mav.param_request_list_send(master.target_system, master.target_component)
+    master.mav.param_request_list_send(1, 1)
