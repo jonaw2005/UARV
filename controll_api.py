@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, Response, jsonify, request
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -5,8 +8,7 @@ import cv2
 from flask_socketio import SocketIO
 import base64
 import time
-import eventlet
-eventlet.monkey_patch()
+
 
 from mav_bridge import MAVBridge
 
