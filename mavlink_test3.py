@@ -30,4 +30,6 @@ while True:
 
     else:
         # optional: andere Nachrichten ignorieren oder debuggen
-        pass
+        print(f"Empfangen: {msg_type} - {msg}")
+
+    master.mav.param_request_list_send(master.target_system, master.target_component)
