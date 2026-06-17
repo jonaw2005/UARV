@@ -11,6 +11,19 @@ from mav_bridge import MAVBridge
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+started = False
+
+def start_background():
+    global started
+    if not started:
+        started = True
+        socketio.start_background_task(stream_video)
+
+@socketio.on("connect")
+def handle_connect():
+    print("Client connected")
+    start_background()
+
 # Initialize a single shared MAVBridge instance and execution pool
 bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
 bridge.connect()
@@ -45,9 +58,7 @@ def stream_video():
             socketio.sleep(0.03)  # ~30 FPS
 
 
-@socketio.on('connect')
-def handle_connect():
-    print('Client connected')
+
 
 def generate_frames():
     while True:
