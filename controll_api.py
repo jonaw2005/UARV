@@ -28,9 +28,12 @@ state_lock = threading.Lock()
 camera = cv2.VideoCapture(1)
 
 def stream_video():
+    print("vor while true")
     while True:
+            print("vor camera.read()")
             success, frame = camera.read()
             if not success:
+                print("Failed to read frame")
                 continue
 
             _, buffer = cv2.imencode('.jpg', frame)
