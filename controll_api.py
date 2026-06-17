@@ -28,9 +28,9 @@ state_lock = threading.Lock()
 camera = cv2.VideoCapture(1)
 
 def stream_video():
-    print("vor while true")
+    #print("vor while true")
     while True:
-            print("vor camera.read()")
+            #print("vor camera.read()")
             success, frame = camera.read()
             if not success:
                 print("Failed to read frame")
@@ -38,8 +38,8 @@ def stream_video():
 
             _, buffer = cv2.imencode('.jpg', frame)
             jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-            print(jpg_as_text[:100])  # Debug: print the beginning of the encoded frame
-            print("nach jpg_as_text")  # Debug: confirm we reached this point
+            #print(jpg_as_text[:100])  # Debug: print the beginning of the encoded frame
+            #print("nach jpg_as_text")  # Debug: confirm we reached this point
             socketio.emit('video_frame', jpg_as_text)
 
             socketio.sleep(0.03)  # ~30 FPS
