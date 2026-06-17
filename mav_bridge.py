@@ -110,6 +110,7 @@ class MAVBridge:
         while True:
             msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
             if msg:
+                print("Received PARAM_VALUE:", msg)
                 if isinstance(msg.param_id, (bytes, bytearray)):
                     param_name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
                 else:
