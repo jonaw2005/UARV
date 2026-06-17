@@ -2,10 +2,14 @@ from flask import Flask, Response, jsonify, request
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import cv2
+from flask_socketio import SocketIO
+import base64
+import time
 
 from mav_bridge import MAVBridge
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize a single shared MAVBridge instance and execution pool
 bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
@@ -22,6 +26,24 @@ state_lock = threading.Lock()
 
 
 camera = cv2.VideoCapture(1)
+
+def stream_video():
+    while True:
+            success, frame = camera.read()
+            if not success:
+                continue
+
+            _, buffer = cv2.imencode('.jpg', frame)
+            jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+
+            socketio.emit('video_frame', jpg_as_text)
+
+            socketio.sleep(0.03)  # ~30 FPS
+
+
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
 
 def generate_frames():
     while True:
@@ -191,4 +213,5 @@ def get_health():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, threaded=True)
+    socketio.run(app, host='0.0.0.0', port=5000)
 

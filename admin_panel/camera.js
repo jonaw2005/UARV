@@ -4,7 +4,7 @@ const cameraState = document.getElementById('cameraState');
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraUrl = document.getElementById('cameraUrl');
 
-const CAMERA_ENDPOINT = 'http://192.168.0.105/api/video';
+const SOCKET_SERVER = 'http://182.168.0.105:5000';
 
 function setCameraStatus(connected) {
   cameraStatus.textContent = connected ? 'Live' : 'Offline';
@@ -22,19 +22,31 @@ function hideCameraError() {
 }
 
 function initCameraStream() {
-  cameraUrl.textContent = CAMERA_ENDPOINT;
+  cameraUrl.textContent = SOCKET_SERVER;
   if (!cameraVideo) {
     return;
   }
 
-  cameraVideo.src = CAMERA_ENDPOINT;
-  cameraVideo.addEventListener('loadedmetadata', () => {
+  const socket = io(SOCKET_SERVER, { transports: ['websocket'] });
+
+  socket.on('connect', () => {
     hideCameraError();
     setCameraStatus(true);
   });
 
-  cameraVideo.addEventListener('error', () => {
-    showCameraError('Could not load camera stream. Confirm the Web API endpoint is reachable.');
+  socket.on('disconnect', () => {
+    showCameraError('Socket.IO disconnected.');
+  });
+
+  socket.on('connect_error', (error) => {
+    showCameraError('Could not connect to Socket.IO.');
+    console.error('Socket.IO connect error:', error);
+  });
+
+  socket.on('video_frame', (data) => {
+    if (data && data.image) {
+      cameraVideo.src = data.image;
+    }
   });
 }
 

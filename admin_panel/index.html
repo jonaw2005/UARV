@@ -24,7 +24,7 @@
             <span id="camera-status">Loading…</span>
           </div>
           <div class="camera-frame">
-            <video id="cameraVideo" autoplay muted playsinline></video>
+            <img id="cameraVideo" alt="Live camera stream" />
             <div class="panel-overlay hidden" id="cameraOverlay">
               Unable to load the camera stream.
             </div>
@@ -92,6 +92,7 @@
       integrity="sha256-p8Q0Bmyg9bYB8hz4xrTu8FmO9ZQpFA7SMtaYjb9bbG0="
       crossorigin=""
     ></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-YbIoxydD6EYfD1/0R5eD7MJLzqqf+48u7gv7pIo9u3PZ4kBT4n7zRyvC49o1kKGj" crossorigin="anonymous"></script>
     <script src="camera.js"></script>
     <script src="map.js"></script>
     <script src="buttons.js"></script>
