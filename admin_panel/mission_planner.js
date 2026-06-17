@@ -381,9 +381,42 @@ clearWaypointsBtn.addEventListener('click', () => {
   refreshMissionList();
 });
 
+function exportMissionToJSON() {
+  const missionJSON = {
+    mission: []
+  };
+
+  let waypointSeq = 1;
+  missionItems.forEach((item, index) => {
+    if (item.type === 'waypoint') {
+      missionJSON.mission.push({
+        type: 'waypoint',
+        seq: waypointSeq,
+        lat: item.lat,
+        lon: item.lon
+      });
+      waypointSeq++;
+    } else if (item.type === 'action') {
+      const entry = {
+        type: 'action',
+        seq: index + 1,
+        action: item.action
+      };
+      // Only include param if the action has one (not rtl, land, or land_start)
+      if (item.param && item.param !== '' && !['rtl', 'land', 'land_start'].includes(item.action)) {
+        entry.param = item.param;
+      }
+      missionJSON.mission.push(entry);
+    }
+  });
+
+  return missionJSON;
+}
+
 uploadMissionBtn.addEventListener('click', () => {
-  console.log('Upload mission', missionItems);
-  alert(`Mission uploaded with ${missionItems.length} waypoint(s).`);
+  const missionJSON = exportMissionToJSON();
+  console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
+  alert(`Mission uploaded with ${missionItems.length} item(s).\n\nJSON:\n${JSON.stringify(missionJSON, null, 2)}`);
 });
 
 refreshWaypointList();
