@@ -28,7 +28,7 @@ async function get_Location() {
 }
 
 if (mapStatus) {
-  mapStatus.textContent = 'Disabled';
+  mapStatus.textContent = 'Status: Ready';
 }
 
 if (mapOverlay) {
