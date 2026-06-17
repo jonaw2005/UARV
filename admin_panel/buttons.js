@@ -1,7 +1,7 @@
 const actionButtons = Array.from(document.querySelectorAll('.action-btn'));
 
 // ── API helper ──────────────────────────────────────────────────────────────
-const API_BASE = 'http://192.168.0.105:5000';
+const API_BASE = 'http://192.168.0.105/api';
 
 async function apiPost(endpoint, body = {}) {
   try {
@@ -17,26 +17,36 @@ async function apiPost(endpoint, body = {}) {
   }
 }
 
+async function apiGet(endpoint) {
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error(`API GET ${endpoint} failed:`, err);
+  }
+}
+
 // ── Command functions (exported for use by HTML) ────────────────────────────
 
 function arm_disarm() {
   console.log('Arm / Disarm triggered');
-  apiPost('/api/arm_disarm');
+  apiPost('/arm');
 }
 
 function change_Mode(mode) {
   console.log(`Change mode to: ${mode}`);
-  apiPost('/api/change_flightmode', { mode });
+  apiPost('/change_flightmode', { mode });
 }
 
 function mission_start() {
   console.log('Mission start triggered');
-  apiPost('/api/mission_start');
+  apiGet('/mission_start');
 }
 
 function abort_mission() {
   console.log('Abort mission triggered');
-  apiPost('/api/abort_mission');
+  apiGet('/abort_mission');
 }
 
 // ── Mode dropdown UI ────────────────────────────────────────────────────────
