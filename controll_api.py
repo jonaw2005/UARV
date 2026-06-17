@@ -430,8 +430,8 @@ def abort_mission():
     }), 202
 
 
-@app.route("/change_mode", methods=["POST"])
-def change_mode():
+@app.route("/change_flightmode", methods=["POST"])
+def change_flightmode():
     data = request.get_json(force=True)
     mode = data.get("mode")
     if not mode:
@@ -444,7 +444,7 @@ def change_mode():
     }), 202
 
 
-@app.route("/get_mode", methods=["GET"])
+@app.route("/get_flightmode", methods=["GET"])
 def get_mode():
     future = run_task(bridge.get_mode)
     mode = future.result()

@@ -26,7 +26,7 @@ function arm_disarm() {
 
 function change_Mode(mode) {
   console.log(`Change mode to: ${mode}`);
-  apiPost('/api/change_mode', { mode });
+  apiPost('/api/change_flightmode', { mode });
 }
 
 function mission_start() {
