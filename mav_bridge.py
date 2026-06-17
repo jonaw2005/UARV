@@ -24,6 +24,7 @@ class MAVBridge:
         self.target_system = target_system
         self.target_component = target_component
 
+
     def connect(self, timeout=30):
         self.master = mu.mavlink_connection(
             self.connection_string,
@@ -32,22 +33,79 @@ class MAVBridge:
             autoreconnect=True,
         )
 
-    def _recv_loop(self):
-        pass
-
-    def send_heartbeat(self):
-        pass
 
     def send_command_long(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
         pass
 
-   
+
+    def arm(self):
+        self.master.arduplane_arm()
+
+
+    def disarm(self):
+        self.master.arduplane_disarm()
+
 
     def set_mode(self, mode):
-        pass
-       
-    def close(self):
-        pass
+        self.master.set_mode(mode)
+
+
+    def set_velocity(self, vx, vy, vz):
+        """
+        Set local velocity in NED frame (m/s)
+        vx: forward (+ North)
+        vy: right (+ East)
+        vz: down (+ Down, positive = sink)
+        """
+
+        # Bitmask: ignore position + acceleration + yaw
+        type_mask = (
+            0b0000111111000111
+        )
+
+        self.master.mav.set_position_target_local_ned_send(
+            0,  # time_boot_ms (0 = ignore)
+            self.master.target_system,
+            self.master.target_component,
+
+            mu.mavlink.MAV_FRAME_LOCAL_NED,
+
+            type_mask,
+
+            0, 0, 0,        # position (ignored)
+            vx, vy, vz,     # velocity (used)
+
+            0, 0, 0,        # acceleration (ignored)
+            0, 0            # yaw, yaw_rate (ignored)
+        )
+
+
+    def goto(self, lat, lon, alt):
+            """
+            Send a GPS waypoint (global position target).
+            lat, lon in degrees
+            alt in meters (relative or absolute depending on frame)
+            """
+
+            self.master.mav.set_position_target_global_int_send(
+                0,  # time_boot_ms
+
+                self.master.target_system,
+                self.master.target_component,
+
+                mu.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+
+                # type_mask: ignore velocity, accel, yaw
+                0b0000111111111000,
+
+                int(lat * 1e7),   # latitude (E7 format)
+                int(lon * 1e7),   # longitude (E7 format)
+                alt,              # altitude in meters
+
+                0, 0, 0,          # velocity ignored
+                0, 0, 0,          # acceleration ignored
+                0, 0              # yaw ignored
+            )
 
 
     def get_all_params(self):
@@ -97,6 +155,7 @@ class MAVBridge:
 
         print("Fertig:", len(params), "Parameter")
         return params
+
 
     def get_param(self, name):
         
