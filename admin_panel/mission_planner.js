@@ -6,6 +6,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const waypointList = document.getElementById('waypointList');
 const missionList = document.getElementById('missionList');
 const addWaypointBtn = document.getElementById('addWaypointBtn');
+const addActionBtn = document.getElementById('addActionBtn');
 const clearWaypointsBtn = document.getElementById('clearWaypointsBtn');
 const uploadMissionBtn = document.getElementById('uploadMissionBtn');
 const coordinateForm = document.getElementById('coordinateForm');
@@ -13,6 +14,12 @@ const inputLat = document.getElementById('inputLat');
 const inputLon = document.getElementById('inputLon');
 const placeWaypointBtn = document.getElementById('placeWaypointBtn');
 const cancelWaypointBtn = document.getElementById('cancelWaypointBtn');
+const actionForm = document.getElementById('actionForm');
+const actionType = document.getElementById('actionType');
+const actionParam = document.getElementById('actionParam');
+const actionParamLabel = document.getElementById('actionParamLabel');
+const placeActionBtn = document.getElementById('placeActionBtn');
+const cancelActionBtn = document.getElementById('cancelActionBtn');
 
 const waypoints = [];
 const missionItems = [];
@@ -28,6 +35,8 @@ function refreshMissionList() {
   missionItems.forEach((item, index) => {
     const row = document.createElement('div');
     row.className = 'mission-item';
+    row.draggable = true;
+    row.dataset.index = index;
     row.innerHTML = `
       <span>${index + 1}. ${item.title}</span>
       <button data-index="${index}">Go</button>
@@ -36,7 +45,53 @@ function refreshMissionList() {
       plannerMap.setView([item.lat, item.lon], 16);
       selectedMarker = item.marker;
     });
+    setupMissionDragEvents(row);
     missionList.appendChild(row);
+  });
+}
+
+function moveMissionItem(fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  const [moved] = missionItems.splice(fromIndex, 1);
+  missionItems.splice(toIndex, 0, moved);
+  refreshMissionList();
+}
+
+function setupMissionDragEvents(row) {
+  row.addEventListener('dragstart', (event) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', row.dataset.index);
+    row.classList.add('dragging');
+  });
+
+  row.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    row.classList.add('drag-over');
+  });
+
+  row.addEventListener('dragenter', (event) => {
+    event.preventDefault();
+    row.classList.add('drag-over');
+  });
+
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('drag-over');
+  });
+
+  row.addEventListener('drop', (event) => {
+    event.preventDefault();
+    const fromIndex = Number(event.dataTransfer.getData('text/plain'));
+    const toIndex = Number(row.dataset.index);
+    row.classList.remove('drag-over');
+    moveMissionItem(fromIndex, toIndex);
+  });
+
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    document.querySelectorAll('.mission-item.drag-over').forEach((item) => {
+      item.classList.remove('drag-over');
+    });
   });
 }
 
@@ -81,10 +136,75 @@ function openCoordinateForm() {
   inputLat.value = center.lat.toFixed(6);
   inputLon.value = center.lng.toFixed(6);
   coordinateForm.style.display = 'block';
+  actionForm.style.display = 'none';
+}
+
+function openActionForm() {
+  actionType.value = 'takeoff';
+  updateActionFields();
+  actionForm.style.display = 'block';
+  coordinateForm.style.display = 'none';
+}
+
+function updateActionFields() {
+  const action = actionType.value;
+  let label = 'Parameter';
+  let placeholder = '';
+  let step = '1';
+
+  switch (action) {
+    case 'takeoff':
+      label = 'Takeoff altitude (m)';
+      placeholder = '100';
+      break;
+    case 'loiter':
+      label = 'Loiter time (s)';
+      placeholder = '60';
+      break;
+    case 'rtl':
+      label = 'No parameters';
+      placeholder = '';
+      break;
+    case 'land':
+      label = 'No parameters';
+      placeholder = '';
+      break;
+    case 'change_alt':
+      label = 'Target altitude (m)';
+      placeholder = '120';
+      break;
+    case 'delay':
+      label = 'Delay seconds';
+      placeholder = '10';
+      break;
+    case 'set_speed':
+      label = 'Speed (m/s)';
+      placeholder = '15';
+      break;
+    case 'condition_yaw':
+      label = 'Yaw heading (deg)';
+      placeholder = '90';
+      break;
+    default:
+      label = 'Parameter';
+      placeholder = '';
+  }
+
+  actionParamLabel.querySelector('.param-label').textContent = label;
+  actionParam.placeholder = placeholder;
+  actionParam.step = step;
+  actionParam.value = '';
+  actionParam.disabled = action === 'rtl' || action === 'land';
+  actionParam.style.display = action === 'rtl' || action === 'land' ? 'none' : 'block';
+  actionParamLabel.style.display = action === 'rtl' || action === 'land' ? 'none' : 'grid';
 }
 
 addWaypointBtn.addEventListener('click', () => {
   openCoordinateForm();
+});
+
+addActionBtn.addEventListener('click', () => {
+  openActionForm();
 });
 
 placeWaypointBtn.addEventListener('click', () => {
@@ -99,8 +219,41 @@ placeWaypointBtn.addEventListener('click', () => {
   }
 });
 
+placeActionBtn.addEventListener('click', () => {
+  const action = actionType.value;
+  const param = actionParam.value;
+  const center = plannerMap.getCenter();
+  const titleMap = {
+    takeoff: `Takeoff to ${param || 'auto'} m`,
+    loiter: `Loiter for ${param || '0'} s`,
+    rtl: 'Return to Launch',
+    land: 'Land',
+    change_alt: `Change altitude to ${param || 'auto'} m`,
+    delay: `Delay ${param || '0'} s`,
+    set_speed: `Set speed to ${param || '0'} m/s`,
+    condition_yaw: `Condition yaw to ${param || '0'}°`,
+  };
+
+  missionItems.push({
+    type: 'action',
+    title: titleMap[action] || 'Action',
+    action,
+    param,
+    lat: center.lat,
+    lon: center.lng,
+  });
+  refreshMissionList();
+  actionForm.style.display = 'none';
+});
+
+actionType.addEventListener('change', updateActionFields);
+
 cancelWaypointBtn.addEventListener('click', () => {
   coordinateForm.style.display = 'none';
+});
+
+cancelActionBtn.addEventListener('click', () => {
+  actionForm.style.display = 'none';
 });
 
 clearWaypointsBtn.addEventListener('click', () => {

@@ -38,6 +38,7 @@
             </div>
             <div class="mission-block mission-actions">
               <button id="addWaypointBtn">Add waypoint</button>
+              <button id="addActionBtn">Add action</button>
               <button id="clearWaypointsBtn">Clear mission</button>
               <button id="uploadMissionBtn">Upload mission</button>
             </div>
@@ -55,6 +56,30 @@
                 <input type="number" id="inputLon" step="0.000001" placeholder="9.480000" />
               </label>
               <button id="placeWaypointBtn">Place waypoint</button>
+            </div>
+            <div class="mission-block" id="actionForm" style="display:none;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                <h2 style="margin:0;">New action</h2>
+                <button id="cancelActionBtn" class="secondary-button" type="button">Cancel</button>
+              </div>
+              <label>
+                Action
+                <select id="actionType">
+                  <option value="takeoff">Takeoff</option>
+                  <option value="loiter">Loiter</option>
+                  <option value="rtl">Return to Launch</option>
+                  <option value="land">Land</option>
+                  <option value="change_alt">Change Altitude</option>
+                  <option value="delay">Delay</option>
+                  <option value="set_speed">Set Speed</option>
+                  <option value="condition_yaw">Condition Yaw</option>
+                </select>
+              </label>
+              <label id="actionParamLabel">
+                <span class="param-label">Altitude (m)</span>
+                <input type="number" id="actionParam" step="1" placeholder="100" />
+              </label>
+              <button id="placeActionBtn">Place action</button>
             </div>
           </div>
         </div>

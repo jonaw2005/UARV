@@ -110,6 +110,15 @@
   cursor: pointer;
 }
 
+.mission-item.dragging {
+  opacity: 0.5;
+}
+
+.mission-item.drag-over {
+  border-color: #1fb4ff;
+  background: rgba(31, 180, 255, 0.08);
+}
+
 .mission-actions {
   display: grid;
   gap: 12px;
@@ -133,7 +142,8 @@
   margin-bottom: 12px;
 }
 
-.mission-block input {
+.mission-block input,
+.mission-block select {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -142,8 +152,13 @@
   padding: 12px 14px;
 }
 
-.mission-block input::placeholder {
-  color: rgba(226, 232, 240, 0.5);
+.mission-block input::placeholder,
+.mission-block select {
+  color: #e2e8f0;
+}
+
+.mission-block select {
+  appearance: none;
 }
 
 .secondary-button {
