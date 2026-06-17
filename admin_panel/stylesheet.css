@@ -136,14 +136,15 @@ body {
 
 .info-card-button {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  min-height: 90px;
 }
 
 .info-card-button button {
-  min-height: 58px;
+  height: 100%;
   width: 100%;
+  min-height: 0;
+  margin: 0;
 }
 
 .info-card span {
