@@ -46,7 +46,7 @@ def stream_video():
             #print("vor camera.read()")
             success, frame = camera.read()
             if not success:
-                print("Failed to read frame")
+                #print("Failed to read frame")
                 continue
 
             _, buffer = cv2.imencode('.jpg', frame)
