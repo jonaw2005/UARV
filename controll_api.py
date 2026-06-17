@@ -35,6 +35,10 @@ def generate_video():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
+@app.route('/api/status')
+def status():
+    return jsonify({'status': 'API is running'})
+
 
 @app.route('/')
 def index():
