@@ -134,24 +134,15 @@ body {
   text-transform: uppercase;
 }
 
-.info-card-action {
+.info-card-button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
-.info-action-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.info-card-button button {
+  min-height: 58px;
   width: 100%;
-}
-
-.info-action-row span {
-  color: #eef2ff;
-  font-size: 0.98rem;
-  flex: 1;
 }
 
 .info-card span {
