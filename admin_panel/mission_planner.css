@@ -110,6 +110,10 @@
   cursor: pointer;
 }
 
+.mission-item button:hover {
+  background: rgba(45, 107, 255, 0.28);
+}
+
 .mission-item.dragging {
   opacity: 0.5;
 }

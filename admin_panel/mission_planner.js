@@ -24,6 +24,7 @@ const cancelActionBtn = document.getElementById('cancelActionBtn');
 const waypoints = [];
 const missionItems = [];
 let selectedMarker = null;
+let editingIndex = null;
 
 function refreshMissionList() {
   missionList.innerHTML = '';
@@ -39,11 +40,22 @@ function refreshMissionList() {
     row.dataset.index = index;
     row.innerHTML = `
       <span>${index + 1}. ${item.title}</span>
-      <button data-index="${index}">Go</button>
+      <button data-index="${index}" class="edit-btn">Edit</button>
     `;
-    row.querySelector('button').addEventListener('click', () => {
-      plannerMap.setView([item.lat, item.lon], 16);
-      selectedMarker = item.marker;
+    row.querySelector('.edit-btn').addEventListener('click', () => {
+      editingIndex = index;
+      if (item.type === 'waypoint') {
+        inputLat.value = item.lat.toFixed(6);
+        inputLon.value = item.lon.toFixed(6);
+        coordinateForm.style.display = 'block';
+        actionForm.style.display = 'none';
+      } else if (item.type === 'action') {
+        actionType.value = item.action;
+        updateActionFields();
+        actionParam.value = item.param || '';
+        actionForm.style.display = 'block';
+        coordinateForm.style.display = 'none';
+      }
     });
     setupMissionDragEvents(row);
     missionList.appendChild(row);
@@ -132,15 +144,19 @@ plannerMap.on('click', (event) => {
 });
 
 function openCoordinateForm() {
-  const center = plannerMap.getCenter();
-  inputLat.value = center.lat.toFixed(6);
-  inputLon.value = center.lng.toFixed(6);
+  if (editingIndex === null) {
+    const center = plannerMap.getCenter();
+    inputLat.value = center.lat.toFixed(6);
+    inputLon.value = center.lng.toFixed(6);
+  }
   coordinateForm.style.display = 'block';
   actionForm.style.display = 'none';
 }
 
 function openActionForm() {
-  actionType.value = 'takeoff';
+  if (editingIndex === null) {
+    actionType.value = 'takeoff';
+  }
   updateActionFields();
   actionForm.style.display = 'block';
   coordinateForm.style.display = 'none';
@@ -211,9 +227,30 @@ placeWaypointBtn.addEventListener('click', () => {
   const lat = parseFloat(inputLat.value);
   const lon = parseFloat(inputLon.value);
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    addWaypoint(lat, lon);
+    if (editingIndex !== null) {
+      // Update existing waypoint
+      const item = missionItems[editingIndex];
+      if (item.marker) plannerMap.removeLayer(item.marker);
+      const marker = L.marker([lat, lon]).addTo(plannerMap);
+      item.lat = lat;
+      item.lon = lon;
+      item.marker = marker;
+      item.title = `Waypoint ${editingIndex + 1}: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+      if (missionItems[editingIndex].waypoint) {
+        const wpIndex = waypoints.findIndex((wp) => wp === missionItems[editingIndex].waypoint);
+        if (wpIndex !== -1) {
+          waypoints[wpIndex] = { lat, lon, marker };
+        }
+      }
+      editingIndex = null;
+    } else {
+      // Create new waypoint
+      addWaypoint(lat, lon);
+    }
     plannerMap.setView([lat, lon], 16);
     coordinateForm.style.display = 'none';
+    refreshWaypointList();
+    refreshMissionList();
   } else {
     alert('Enter valid latitude and longitude values.');
   }
@@ -222,7 +259,6 @@ placeWaypointBtn.addEventListener('click', () => {
 placeActionBtn.addEventListener('click', () => {
   const action = actionType.value;
   const param = actionParam.value;
-  const center = plannerMap.getCenter();
   const titleMap = {
     takeoff: `Takeoff to ${param || 'auto'} m`,
     loiter: `Loiter for ${param || '0'} s`,
@@ -234,14 +270,25 @@ placeActionBtn.addEventListener('click', () => {
     condition_yaw: `Condition yaw to ${param || '0'}°`,
   };
 
-  missionItems.push({
-    type: 'action',
-    title: titleMap[action] || 'Action',
-    action,
-    param,
-    lat: center.lat,
-    lon: center.lng,
-  });
+  if (editingIndex !== null) {
+    // Update existing action
+    const item = missionItems[editingIndex];
+    item.action = action;
+    item.param = param;
+    item.title = titleMap[action] || 'Action';
+    editingIndex = null;
+  } else {
+    // Create new action
+    const center = plannerMap.getCenter();
+    missionItems.push({
+      type: 'action',
+      title: titleMap[action] || 'Action',
+      action,
+      param,
+      lat: center.lat,
+      lon: center.lng,
+    });
+  }
   refreshMissionList();
   actionForm.style.display = 'none';
 });
@@ -249,10 +296,12 @@ placeActionBtn.addEventListener('click', () => {
 actionType.addEventListener('change', updateActionFields);
 
 cancelWaypointBtn.addEventListener('click', () => {
+  editingIndex = null;
   coordinateForm.style.display = 'none';
 });
 
 cancelActionBtn.addEventListener('click', () => {
+  editingIndex = null;
   actionForm.style.display = 'none';
 });
 
