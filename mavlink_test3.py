@@ -1,7 +1,7 @@
 from pymavlink import mavutil
 
 # Verbindung zum Pixhawk (USB Serial)
-master = mavutil.mavlink_connection('/dev/ttyAMA0', baud=921600)
+master = mavutil.mavlink_connection('/dev/ttyAMA0', baud=57600)
 
 print("Warte auf Heartbeat vom Pixhawk...")
 

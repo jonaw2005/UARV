@@ -5,7 +5,7 @@ import json
 
 con = "/dev/ttyAMA0"
 master = None
-baud = 921600
+baud = 57600
 
 try:
     print(f"Connecting to {con}...")
