@@ -4,7 +4,7 @@ Simple MAVLink connection tester.
 
 Usage:
  python mavlink_test.py --connection udp:127.0.0.1:14550
- python mavlink_test.py --connection /dev/ttyUSB0:57600
+ python mavlink_test.py --connection /dev/ttyAMA0:921600
 """
 
 import argparse

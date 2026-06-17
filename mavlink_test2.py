@@ -1,13 +1,15 @@
 from pymavlink import mavutil
 import sys
 
-con = "/dev/ttyACM0"
+con = "/dev/ttyAMA0"
 master = None
+baud = 921600
 
 try:
     print(f"Connecting to {con}...")
     master = mavutil.mavlink_connection(
         con,
+        baud=baud,
         source_system=255,
         autoreconnect=True,
     )
@@ -22,7 +24,10 @@ try:
     print(
         f"Heartbeat received from system {master.target_system}, component {master.target_component}"
     )
-    print("MAVLink version:", master.version)
+    try:
+        print("MAVLink version:", master.version)
+    except Exception as e:
+        print(f"Error retrieving MAVLink version: {e}", file=sys.stderr)
 
     print("Requesting parameter list...")
     master.mav.param_request_list_send(
