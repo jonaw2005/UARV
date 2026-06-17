@@ -413,7 +413,44 @@ def download_mission():
         "mission": mission
     }), 202
 
+@app.route("/mission_start", methods=["GET"])
+def start_mission():
+    future = run_task(bridge.start_mission)
+    return jsonify({
+        "status": "mission_start_requested",
+        "task_id": id(future)
+    }), 202
 
+@app.route("/abort", methods=["GET"])
+def abort_mission():
+    future = run_task(bridge.abort_mission)
+    return jsonify({
+        "status": "mission_abort_requested",
+        "task_id": id(future)
+    }), 202
+
+
+@app.route("/change_mode", methods=["POST"])
+def change_mode():
+    data = request.get_json(force=True)
+    mode = data.get("mode")
+    if not mode:
+        return jsonify({"error": "missing mode"}), 400
+
+    future = run_task(bridge.change_mode, mode)
+    return jsonify({
+        "status": "mode_change_requested",
+        "task_id": id(future)
+    }), 202
+
+
+@app.route("/get_mode", methods=["GET"])
+def get_mode():
+    future = run_task(bridge.get_mode)
+    mode = future.result()
+    return jsonify({
+        "mode": mode
+    }), 200
 
 def cleanup():
     global running, camera, bridge, executor

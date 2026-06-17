@@ -652,6 +652,52 @@ class MAVBridge:
         }
 
 
+    def change_mode(self, mode):
+        mode_mapping = self.master.mode_mapping()
+
+        if mode not in mode_mapping:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        mode_id = mode_mapping[mode]
+
+        self.master.mav.set_mode_send(
+            self.master.target_system,
+            mu.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            mode_id
+        )
+
+    def abort(self):
+        # example: disarm and set mode to MANUAL
+        self.disarm()
+        time.sleep(0.5)
+        self.change_mode("MANUAL")
+
+    def start_mission(self):
+        # example: set mode to AUTO
+        self.change_mode("AUTO")
+
+    def get_mode(self):
+        with self._master_lock:
+            self.master.mav.request_data_stream_send(
+                self.master.target_system,
+                self.master.target_component,
+                mu.mavlink.MAV_DATA_STREAM_ALL,
+                1,
+                1,
+            )
+
+            while True:
+                msg = self.master.recv_match(blocking=True, timeout=5)
+                if msg and msg.get_type() == 'HEARTBEAT':
+                    mode_id = msg.custom_mode
+                    mode_mapping = self.master.mode_mapping()
+                    for mode_name, mid in mode_mapping.items():
+                        if mid == mode_id:
+                            return mode_name
+                    return f"UNKNOWN({mode_id})"
+                elif not msg:
+                    raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
+
 
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
