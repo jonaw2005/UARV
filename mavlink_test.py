@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import sys
+import time
 
 from pymavlink import mavutil
 
@@ -32,22 +33,51 @@ def create_connection(connection_string, source_system=255, timeout=10):
     return master
 
 def request_params(master):
+   
     print("Requesting parameter list...")
+
     master.mav.param_request_list_send(
         master.target_system,
-        master.target_component,
+        master.target_component
     )
 
-    for _ in range(20):
-        msg = master.recv_match(type=["PARAM_VALUE", "HEARTBEAT"], blocking=True, timeout=5)
-        if not msg:
-            print("No more messages received.")
-            break
-        print(msg)
-        if msg.get_type() == "PARAM_VALUE":
-            continue
+    params = {}
 
-    print("Finished requesting parameters.")
+    last_param_time = time.time()
+    last_request_time = time.time()
+    param_request_sent = True
+
+    while True:
+        msg = master.recv_match(type='PARAM_VALUE', blocking=True, timeout=1)
+
+        if msg:
+            # param_id may be bytes (py3) or already str depending on pymavlink version
+            if isinstance(msg.param_id, (bytes, bytearray)):
+                name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
+            else:
+                name = str(msg.param_id).rstrip('\x00')
+            params[name] = msg.param_value
+            last_param_time = time.time()
+            print(name, params[name])
+
+        # Retry parameter request if no response for 3 seconds
+        if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
+            if len(params) == 0:  # No parameters received yet, retry
+                print("No parameters received, retrying request...")
+                master.mav.param_request_list_send(
+                    master.target_system,
+                    master.target_component
+                )
+                last_request_time = time.time()
+            else:
+                # Got some parameters but no more for 3 seconds, stop
+                break
+        
+        # Stop if 5 seconds of no new parameters after receiving at least one
+        if len(params) > 0 and time.time() - last_param_time > 5:
+            break
+
+    print("Fertig:", len(params), "Parameter")
 
 
 def main():
