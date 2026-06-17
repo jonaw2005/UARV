@@ -50,6 +50,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 const latitudeValue = document.getElementById('latitudeValue');
 const longitudeValue = document.getElementById('longitudeValue');
+const gpsUpdated = document.getElementById('gpsUpdated');
 
 function update_Map(latValue, lonValue) {
   if (!map) {
@@ -69,6 +70,12 @@ function updateLocationFields(latValue, lonValue) {
   }
 }
 
+function updateTimestamp() {
+  if (gpsUpdated) {
+    gpsUpdated.textContent = new Date().toLocaleTimeString();
+  }
+}
+
 const refreshLocationBtn = document.getElementById('refreshLocationBtn');
 if (refreshLocationBtn) {
   refreshLocationBtn.addEventListener('click', async () => {
@@ -77,6 +84,7 @@ if (refreshLocationBtn) {
     if (newLat != null && newLon != null) {
       updateLocationFields(newLat, newLon);
       update_Map(newLat, newLon);
+      updateTimestamp();
     }
   });
 }
