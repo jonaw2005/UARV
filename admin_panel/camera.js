@@ -26,11 +26,14 @@ function initCameraStream() {
   if (!cameraVideo) {
     return;
   }
-
+  /**
   const socket = io(window.location.origin, {
     path: "/socket.io",
     transports: ['websocket']
   });
+  **/
+
+  const socket  = io(window.location.origin)
 
   socket.on('connect', () => {
     hideCameraError();
