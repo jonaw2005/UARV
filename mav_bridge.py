@@ -76,7 +76,7 @@ class MAVBridge:
                     name = str(msg.param_id).rstrip('\x00')
                 params[name] = msg.param_value
                 last_param_time = time.time()
-                print(msg.param_id)
+                #print(msg.param_id)
 
             # Retry parameter request if no response for 3 seconds
             if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
@@ -96,15 +96,36 @@ class MAVBridge:
                 break
 
         print("Fertig:", len(params), "Parameter")
-        return params.to_dict()
+        return params
 
     def get_param(self, name):
-        pass
+        
+        self.master.mav.param_request_read_send(
+            self.master.target_system,
+            self.master.target_component,
+            name.encode('utf-8'),
+            -1
+        )
+
+        while True:
+            msg = self.master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
+            if msg:
+                if isinstance(msg.param_id, (bytes, bytearray)):
+                    param_name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
+                else:
+                    param_name = str(msg.param_id).rstrip('\x00')
+                if param_name == name:
+                    return msg.param_value
+            else:
+                raise TimeoutError(f"Timeout waiting for parameter {name}")
         
 
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     bridge.connect()
     print("Connected, requesting parameters...")
-    params = bridge.get_all_params()
-    print("Got parameters:", params)
+    #params = bridge.get_all_params()
+    #print("Got parameters:", params)
+    print("Requesting single parameter...")
+    param_value = bridge.get_param("GPS_RAW_DATA")
+    print("Got parameter:", param_value)
