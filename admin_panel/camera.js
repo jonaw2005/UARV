@@ -27,11 +27,15 @@ function initCameraStream() {
     return;
   }
 
-  const socket = io(SOCKET_SERVER, { transports: ['websocket'] });
+  const socket = io(window.location.origin, {
+    path: "/socket.io",
+    transports: ['websocket']
+  });
 
   socket.on('connect', () => {
     hideCameraError();
     setCameraStatus(true);
+    console.log("Socket connected:", socket.id);
   });
 
   socket.on('disconnect', () => {
@@ -44,8 +48,19 @@ function initCameraStream() {
   });
 
   socket.on('video_frame', (data) => {
-    if (data && data.image) {
-      cameraVideo.src = data.image;
+
+    if (!data) return;
+
+    /**
+     * Unterstützt beide Varianten:
+     * 1) data.image (dein bisheriger Ansatz)
+     * 2) direkt base64 string (empfohlen)
+     */
+
+    const frame = data.image || data;
+
+    if (typeof frame === "string") {
+      cameraVideo.src = frame; 
     }
   });
 }
