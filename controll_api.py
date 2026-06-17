@@ -38,7 +38,24 @@ state = {
 state_lock = threading.Lock()
 
 
-camera = cv2.VideoCapture(1)
+def find_working_camera(max_index=10):
+    for i in range(max_index):
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            ret, _ = cap.read()
+            if ret:
+                cap.release()
+                return i
+        cap.release()
+    return None
+
+cam_index = find_working_camera()
+
+if cam_index is None:
+    raise Exception("No camera found")
+
+camera = cv2.VideoCapture(cam_index)
+print("Using camera:", cam_index)
 
 def stream_video():
     #print("vor while true")
