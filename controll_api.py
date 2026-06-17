@@ -421,7 +421,7 @@ def start_mission():
         "task_id": id(future)
     }), 202
 
-@app.route("/abort", methods=["GET"])
+@app.route("/abort_mission", methods=["GET"])
 def abort_mission():
     future = run_task(bridge.abort_mission)
     return jsonify({
