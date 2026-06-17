@@ -35,6 +35,7 @@ def stream_video():
 
             _, buffer = cv2.imencode('.jpg', frame)
             jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+            print(jpg_as_text[:100])  # Debug: print the beginning of the encoded frame
 
             socketio.emit('video_frame', jpg_as_text)
 

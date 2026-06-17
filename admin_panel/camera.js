@@ -52,7 +52,9 @@ function initCameraStream() {
 
   socket.on('video_frame', (data) => {
 
-    if (!data) return;
+    const frame = data?.image || data;
+
+    if (!frame) return;
 
     /**
      * Unterstützt beide Varianten:
@@ -60,11 +62,12 @@ function initCameraStream() {
      * 2) direkt base64 string (empfohlen)
      */
 
-    const frame = data.image || data;
+    //const frame = data.image || data;
 
-    if (typeof frame === "string") {
+    /*if (typeof frame === "string") {
       cameraVideo.src = frame; 
-    }
+    }*/
+    cameraVideo.src = "data:image/jpeg;base64," + frame;
   });
 }
 
