@@ -11,14 +11,15 @@ try:
     print(f"Connecting to {con}...")
     master = mavutil.mavlink_connection(
         con,
-        baud=baud,
-        source_system=255,
-        autoreconnect=True,
+        baud=baud
+#        source_system=255,
+#        autoreconnect=True,
     )
 
     print("Waiting for heartbeat...")
     try:
-        master.wait_heartbeat(timeout=10)
+#        master.wait_heartbeat(timeout=10)
+        master.wait_heartbeat()
     except Exception as e:
         print(f"Heartbeat timeout/error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -26,18 +27,24 @@ try:
     print(
         f"Heartbeat received from system {master.target_system}, component {master.target_component}"
     )
-    try:
-        print("MAVLink version:", master.version)
-    except Exception as e:
-        print(f"Error retrieving MAVLink version: {e}", file=sys.stderr)
+#    try:
+#        print("MAVLink version:", master.version)
+#    except Exception as e:
+#        print(f"Error retrieving MAVLink version: {e}", file=sys.stderr)
 
-    print("Requesting parameter list...")
-    master.mav.param_request_list_send(
-        master.target_system,
-        master.target_component,
+#    print("Requesting parameter list...")
+#    master.mav.param_request_list_send(
+#        master.target_system,
+#        master.target_component,
 #        mavutil.mavlink.MAV_MISSION_TYPE_ALL
-    )
+#    )
 
+    print("Requesting parameters...")
+    master.mav.param_request_list_send(1,1)
+
+    received = master.recv_msg()
+
+    print("Received message:", received)
 
     params = {}
 
