@@ -177,11 +177,12 @@ body {
 
 .panel-actions {
   grid-column: 1 / -1;
+  overflow: visible;
 }
 
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   padding: 22px;
 }
@@ -194,6 +195,7 @@ body {
 
 .action-btn {
   min-height: 58px;
+  width: 100%;
   border: none;
   border-radius: 14px;
   background: linear-gradient(135deg, #2d6bff, #1fb4ff);

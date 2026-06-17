@@ -89,6 +89,7 @@ function buildModeDropdown() {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       change_Mode(mode);
+      buttons[1].textContent = `Mode: ${mode}`;
       dropdown.style.display = 'none';
     });
     dropdown.appendChild(item);
