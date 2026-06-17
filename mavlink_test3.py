@@ -1,4 +1,5 @@
 from pymavlink import mavutil
+import time
 
 # Verbindung zum Pixhawk (USB Serial)
 master = mavutil.mavlink_connection('/dev/ttyAMA0', baud=57600)
@@ -14,8 +15,8 @@ print("Heartbeat empfangen!")
 beat = 0
 status = 0
 gps = 0
-
-master.mav.param_request_list_send(1, 1)
+param_request_sent = False
+last_param_request = 0
 
 while True:
     msg = master.recv_match(blocking=True)
@@ -29,6 +30,11 @@ while True:
     if msg_type == "HEARTBEAT" and beat == 0:
         print("Heartbeat OK")
         beat = 1
+        # Send parameter request after heartbeat received
+        if not param_request_sent:
+            master.mav.param_request_list_send(1, 1)
+            param_request_sent = True
+            last_param_request = time.time()
 
     elif msg_type == "SYS_STATUS" and status == 0:
         print("Systemstatus:", msg)
@@ -41,5 +47,8 @@ while True:
     elif msg_type == "PARAM_VALUE":
         # optional: Parameterwerte anzeigen
         print(f"Parameter: {msg.param_id} = {msg.param_value}")
-
-    master.mav.param_request_list_send(1, 1)
+    
+    # Resend parameter request if no response for 5 seconds
+    if param_request_sent and time.time() - last_param_request > 5:
+        master.mav.param_request_list_send(1, 1)
+        last_param_request = time.time()
