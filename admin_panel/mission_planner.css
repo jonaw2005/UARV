@@ -1,24 +1,25 @@
 .planner-shell {
-  max-width: 1440px;
+  max-width: 100%;
   margin: 0 auto;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 18px;
-  padding: 18px;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
 }
 
 .planner-panel {
   background: rgba(14, 28, 39, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
 }
 
 .planner-header {
-  padding: 18px 24px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -44,7 +45,7 @@
 .planner-body {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 112px);
+  min-height: calc(100vh - 80px);
 }
 
 .planner-map {
@@ -61,10 +62,12 @@
 }
 
 .mission-sidebar {
-  padding: 18px;
+  padding: 18px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
 }
 
 .mission-block {
