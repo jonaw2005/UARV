@@ -159,7 +159,7 @@ def run_task(fn, *args, **kwargs):
     return executor.submit(fn, *args, **kwargs)
 
 
-@app.route('/arm', methods=['POST'])
+@app.route('/arm', methods=['GET'])
 def arm():
     future = run_task(bridge.arm)
     return jsonify({'status': 'arming requested', 'task_id': id(future)})
