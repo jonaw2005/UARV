@@ -33,8 +33,7 @@ try:
     master.mav.param_request_list_send(
         master.target_system,
         master.target_component,
-        0,
-        0,
+#        mavutil.mavlink.MAV_MISSION_TYPE_ALL
     )
 
     for i in range(20):
