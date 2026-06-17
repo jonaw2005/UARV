@@ -261,6 +261,10 @@ function updateActionFields() {
       label = 'Yaw heading (deg)';
       placeholder = '90';
       break;
+    case 'land_start':
+      label = 'No parameters';
+      placeholder = '';
+      break;
     default:
       label = 'Parameter';
       placeholder = '';
