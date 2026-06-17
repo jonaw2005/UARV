@@ -388,12 +388,14 @@ def upload_mission():
 
     mav_items = translate_mission(mission_json)
 
-    try:
-        future = run_task(bridge.upload_mission, mav_items)
-        response = future.result(timeout=15)
-        return jsonify(response), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#    try:
+#        future = run_task(bridge.upload_mission, mav_items)
+#        response = future.result(timeout=15)
+#        return jsonify(response), 200
+#    except Exception as e:
+#        return jsonify({'error': str(e)}), 500
+    task_id = 0
+    logging.info(mav_items)
 
     return jsonify({
         "status": "upload_started",
