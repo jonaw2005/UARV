@@ -43,7 +43,7 @@ function abort_mission() {
 
 const MODES = ['MANUAL', 'FBWA', 'AUTO', 'GUIDED', 'RTL'];
 
-function buildModeDropdown() {
+function buildModeDropdown(modeButton) {
   const wrapper = document.createElement('div');
   wrapper.className = 'mode-dropdown-wrapper';
   wrapper.style.position = 'relative';
@@ -89,7 +89,7 @@ function buildModeDropdown() {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       change_Mode(mode);
-      buttons[1].textContent = `Mode: ${mode}`;
+      modeButton.textContent = `Mode: ${mode}`;
       dropdown.style.display = 'none';
     });
     dropdown.appendChild(item);
@@ -113,7 +113,7 @@ function setupActionButtons() {
   // Mode Selection
   buttons[1].disabled = false;
   buttons[1].id = 'modeSelectBtn';
-  const { wrapper, dropdown } = buildModeDropdown();
+  const { wrapper, dropdown } = buildModeDropdown(buttons[1]);
   // Insert the wrapper after the button in the DOM
   buttons[1].parentNode.insertBefore(wrapper, buttons[1].nextSibling);
   wrapper.appendChild(buttons[1]); // move button into wrapper
