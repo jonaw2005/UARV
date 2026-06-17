@@ -130,8 +130,21 @@ def get_all_params():
 
 @app.route('/telemetry', methods=['GET'])
 def telemetry():
-    with state_lock:
-        return jsonify(state)
+    try:
+        # run telemetry collection in background to avoid blocking server threads
+        future = run_task(bridge.get_telemetry)
+        telemetry = future.result(timeout=10)
+
+        # update lightweight cached state (location only)
+        with state_lock:
+            if telemetry.get('lat') is not None:
+                state['location']['lat'] = telemetry.get('lat')
+            if telemetry.get('lon') is not None:
+                state['location']['lon'] = telemetry.get('lon')
+
+        return jsonify(telemetry)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/health', methods=['GET'])

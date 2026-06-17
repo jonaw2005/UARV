@@ -180,6 +180,75 @@ class MAVBridge:
                 raise TimeoutError(f"Timeout waiting for parameter {name}")
         
 
+    def get_telemetry(self, timeout=5):
+        """Request current telemetry and return a JSON-friendly dict."""
+        self.master.mav.request_data_stream_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_DATA_STREAM_ALL,
+            1,
+            1,
+        )
+
+        telemetry = {
+            'lat': None,
+            'lon': None,
+            'altitude': None,
+            'relative_altitude': None,
+            'groundspeed': None,
+            'airspeed': None,
+            'heading': None,
+            'climb': None,
+            'roll': None,
+            'pitch': None,
+            'yaw': None,
+            'satellites_visible': None,
+            'gps_fix_type': None,
+            'battery_voltage': None,
+            'battery_current': None,
+            'load': None,
+        }
+
+        start = time.time()
+        while time.time() - start < timeout:
+            msg = self.master.recv_match(blocking=True, timeout=0.5)
+            if msg is None:
+                continue
+
+            msg_type = msg.get_type()
+            if msg_type == 'GLOBAL_POSITION_INT':
+                telemetry['lat'] = msg.lat / 1e7
+                telemetry['lon'] = msg.lon / 1e7
+                telemetry['altitude'] = msg.alt / 1000.0
+                telemetry['relative_altitude'] = msg.relative_alt / 1000.0
+                if hasattr(msg, 'hdg') and msg.hdg != 65535:
+                    telemetry['heading'] = msg.hdg / 100.0
+                if hasattr(msg, 'velocity'):
+                    telemetry['groundspeed'] = msg.velocity / 100.0
+
+            elif msg_type == 'VFR_HUD':
+                telemetry['groundspeed'] = msg.groundspeed
+                telemetry['airspeed'] = msg.airspeed
+                telemetry['heading'] = msg.heading
+                telemetry['climb'] = msg.climb
+
+            elif msg_type == 'ATTITUDE':
+                telemetry['roll'] = msg.roll
+                telemetry['pitch'] = msg.pitch
+                telemetry['yaw'] = msg.yaw
+
+            elif msg_type == 'GPS_RAW_INT':
+                telemetry['gps_fix_type'] = msg.fix_type
+                telemetry['satellites_visible'] = msg.satellites_visible
+
+            elif msg_type == 'SYS_STATUS':
+                telemetry['battery_voltage'] = msg.voltage_battery / 1000.0 if msg.voltage_battery is not None else None
+                telemetry['battery_current'] = msg.current_battery / 100.0 if msg.current_battery is not None else None
+                telemetry['load'] = msg.load / 10.0 if msg.load is not None else None
+
+        return telemetry
+        
+
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     bridge.connect()
