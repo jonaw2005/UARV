@@ -62,6 +62,7 @@ function update_Map(latValue, lonValue) {
 const refreshLocationBtn = document.getElementById('refreshLocationBtn');
 if (refreshLocationBtn) {
   refreshLocationBtn.addEventListener('click', async () => {
+    console.log('Refresh Location button clicked');
     const { lat: newLat, lon: newLon } = await get_Location();
     if (newLat != null && newLon != null) {
       update_Map(newLat, newLon);
