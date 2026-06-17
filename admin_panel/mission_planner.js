@@ -70,7 +70,10 @@ function refreshMissionList() {
     row.dataset.index = index;
     row.innerHTML = `
       <span>${index + 1}. ${item.title}</span>
-      <button data-index="${index}" class="edit-btn">Edit</button>
+      <div class="mission-item-buttons">
+        <button data-index="${index}" class="edit-btn">Edit</button>
+        <button data-index="${index}" class="remove-btn">Remove</button>
+      </div>
     `;
     row.querySelector('.edit-btn').addEventListener('click', () => {
       editingIndex = index;
@@ -86,6 +89,10 @@ function refreshMissionList() {
         actionForm.style.display = 'block';
         coordinateForm.style.display = 'none';
       }
+    });
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      missionItems.splice(index, 1);
+      refreshMissionList();
     });
     setupMissionDragEvents(row);
     missionList.appendChild(row);
@@ -350,7 +357,20 @@ cancelActionBtn.addEventListener('click', () => {
 });
 
 clearWaypointsBtn.addEventListener('click', () => {
-  waypoints.forEach((wp) => plannerMap.removeLayer(wp.marker));
+  // Remove all mission markers from map
+  missionItems.forEach((item) => {
+    if (item.missionMarker) {
+      plannerMap.removeLayer(item.missionMarker);
+    }
+  });
+  
+  // Clear polyline
+  if (missionPolyline) {
+    plannerMap.removeLayer(missionPolyline);
+    missionPolyline = null;
+  }
+  
+  // Clear data
   waypoints.length = 0;
   missionItems.length = 0;
   refreshWaypointList();

@@ -231,3 +231,18 @@
     min-height: auto;
   }
 }
+
+.mission-item-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mission-item .remove-btn {
+  background: rgba(255, 70, 70, 0.18);
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.mission-item .remove-btn:hover {
+  background: rgba(255, 70, 70, 0.28);
+}
