@@ -31,7 +31,8 @@ try:
 #        print("MAVLink version:", master.version)
 #    except Exception as e:
 #        print(f"Error retrieving MAVLink version: {e}", file=sys.stderr)
-
+    master.target_system = 1
+    master.target_component = 1
     print("Requesting parameter list...")
     master.mav.param_request_list_send(
         master.target_system,
