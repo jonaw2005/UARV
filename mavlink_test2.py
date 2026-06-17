@@ -57,7 +57,11 @@ try:
         msg = master.recv_match(type='PARAM_VALUE', blocking=True, timeout=1)
 
         if msg:
-            name = msg.param_id.decode().strip('\x00')
+            # param_id may be bytes (py3) or already str depending on pymavlink version
+            if isinstance(msg.param_id, (bytes, bytearray)):
+                name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
+            else:
+                name = str(msg.param_id).rstrip('\x00')
             params[name] = msg.param_value
             last_param_time = time.time()
             print(name, params[name])
