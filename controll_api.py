@@ -46,7 +46,7 @@ state = {
 state_lock = threading.Lock()
 
 
-def find_working_camera(max_index=10):
+def find_working_camera(max_index=6):
     for i in range(max_index):
         cap = cv2.VideoCapture(i)
         if cap.isOpened():
