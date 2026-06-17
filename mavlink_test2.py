@@ -49,19 +49,34 @@ try:
 
     params = {}
 
-    last_time = time.time()
+    last_param_time = time.time()
+    last_request_time = time.time()
+    param_request_sent = True
 
     while True:
-        msg = master.recv_match(type='PARAM_VALUE', blocking=True)
+        msg = master.recv_match(type='PARAM_VALUE', blocking=True, timeout=1)
 
         if msg:
             name = msg.param_id.decode().strip('\x00')
             params[name] = msg.param_value
-            last_time = time.time()
+            last_param_time = time.time()
             print(name, params[name])
 
-        # Stop wenn 3 Sekunden nichts mehr kommt
-        if time.time() - last_time > 3:
+        # Retry parameter request if no response for 3 seconds
+        if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
+            if len(params) == 0:  # No parameters received yet, retry
+                print("No parameters received, retrying request...")
+                master.mav.param_request_list_send(
+                    master.target_system,
+                    master.target_component
+                )
+                last_request_time = time.time()
+            else:
+                # Got some parameters but no more for 3 seconds, stop
+                break
+        
+        # Stop if 5 seconds of no new parameters after receiving at least one
+        if len(params) > 0 and time.time() - last_param_time > 5:
             break
 
     print("Fertig:", len(params), "Parameter")
