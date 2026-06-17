@@ -666,7 +666,7 @@ class MAVBridge:
             mode_id
         )
 
-    def abort(self):
+    def abort_mission(self):
         # example: disarm and set mode to MANUAL
         self.disarm()
         time.sleep(0.5)
