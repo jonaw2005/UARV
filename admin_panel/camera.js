@@ -4,7 +4,7 @@ const cameraState = document.getElementById('cameraState');
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraUrl = document.getElementById('cameraUrl');
 
-const CAMERA_ENDPOINT = 'http://127.0.0.1:8000/video';
+const CAMERA_ENDPOINT = 'http://127.0.0.1/api/video';
 
 function setCameraStatus(connected) {
   cameraStatus.textContent = connected ? 'Live' : 'Offline';
