@@ -3,11 +3,6 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import cv2
 
-try:
-    from videostream.stream_api import generate
-except Exception:
-    generate = None
-
 from mav_bridge import MAVBridge
 
 app = Flask(__name__)
@@ -55,8 +50,7 @@ def index():
 
 @app.route('/video')
 def video():
-	return Response(generate(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
+	return Response(generate_video(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
 
 
 def run_task(fn, *args, **kwargs):
