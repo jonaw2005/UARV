@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UARV Mission Planner</title>
+    <link rel="stylesheet" href="stylesheet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      .planner-shell {
+        max-width: 1440px;
+        margin: 0 auto;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+        padding: 18px;
+      }
+
+      .planner-panel {
+        background: rgba(14, 28, 39, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 22px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .planner-header {
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .planner-header h1 {
+        margin: 0;
+        font-size: 1.12rem;
+      }
+
+      .planner-header a {
+        color: #a8caff;
+        text-decoration: none;
+      }
+
+      .planner-body {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        min-height: calc(100vh - 112px);
+      }
+
+      .planner-map {
+        position: relative;
+        background: #08121f;
+      }
+
+      #plannerMap {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .mission-sidebar {
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .mission-block {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .mission-block h2 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        color: #e2e8f0;
+      }
+
+      .mission-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .mission-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .mission-item span {
+        color: #e2e8f0;
+        font-size: 0.95rem;
+      }
+
+      .mission-item button {
+        border: none;
+        background: rgba(45, 107, 255, 0.18);
+        color: #ffffff;
+        border-radius: 12px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .mission-actions {
+        display: grid;
+        gap: 12px;
+      }
+
+      .mission-actions button {
+        width: 100%;
+        min-height: 48px;
+        border: none;
+        border-radius: 14px;
+        color: #ffffff;
+        background: linear-gradient(135deg, #2d6bff, #1fb4ff);
+        cursor: pointer;
+      }
+
+      @media (max-width: 1024px) {
+        .planner-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .planner-body {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="planner-shell">
+      <section class="planner-panel">
+        <div class="planner-header">
+          <div>
+            <h1>Mission Planner</h1>
+            <p style="margin: 6px 0 0; color: #a8b2c7; font-size: 0.95rem;">
+              Plan waypoints, edit missions, and send routes to the vehicle.
+            </p>
+          </div>
+          <a href="index.html">Back to dashboard</a>
+        </div>
+        <div class="planner-body">
+          <div class="planner-map">
+            <div id="plannerMap"></div>
+          </div>
+          <div class="mission-sidebar">
+            <div class="mission-block">
+              <h2>Waypoint list</h2>
+              <div class="mission-list" id="waypointList"></div>
+            </div>
+            <div class="mission-block mission-actions">
+              <button id="addWaypointBtn">Add waypoint</button>
+              <button id="clearWaypointsBtn">Clear mission</button>
+              <button id="uploadMissionBtn">Upload mission</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+    <script>
+      const plannerMap = L.map('plannerMap').setView([47.66, 9.48], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(plannerMap);
+
+      const waypointList = document.getElementById('waypointList');
+      const addWaypointBtn = document.getElementById('addWaypointBtn');
+      const clearWaypointsBtn = document.getElementById('clearWaypointsBtn');
+      const uploadMissionBtn = document.getElementById('uploadMissionBtn');
+
+      const waypoints = [];
+      let selectedMarker = null;
+
+      function refreshWaypointList() {
+        waypointList.innerHTML = '';
+        waypoints.forEach((wp, index) => {
+          const row = document.createElement('div');
+          row.className = 'mission-item';
+          row.innerHTML = `
+            <span>WP ${index + 1}: ${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span>
+            <button data-index="${index}">Go</button>
+          `;
+          row.querySelector('button').addEventListener('click', () => {
+            plannerMap.setView([wp.lat, wp.lon], 16);
+            selectedMarker = wp.marker;
+          });
+          waypointList.appendChild(row);
+        });
+      }
+
+      function addWaypoint(lat, lon) {
+        const marker = L.marker([lat, lon]).addTo(plannerMap);
+        waypoints.push({ lat, lon, marker });
+        refreshWaypointList();
+      }
+
+      plannerMap.on('click', (event) => {
+        addWaypoint(event.latlng.lat, event.latlng.lng);
+      });
+
+      addWaypointBtn.addEventListener('click', () => {
+        const center = plannerMap.getCenter();
+        addWaypoint(center.lat, center.lng);
+      });
+
+      clearWaypointsBtn.addEventListener('click', () => {
+        waypoints.forEach((wp) => plannerMap.removeLayer(wp.marker));
+        waypoints.length = 0;
+        refreshWaypointList();
+      });
+
+      uploadMissionBtn.addEventListener('click', () => {
+        console.log('Upload mission', waypoints);
+        alert(`Mission uploaded with ${waypoints.length} waypoint(s).`);
+      });
+    </script>
+  </body>
+</html>

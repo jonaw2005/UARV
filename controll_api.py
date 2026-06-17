@@ -204,6 +204,11 @@ def get_param():
         return jsonify({'error': str(e)}), 500
     
 
+@app.route('/set_mission')
+def set_mission():
+    pass
+
+
 @app.route('/get_param_test', methods=['GET'])
 def get_param_test():
     data = {'name': 'STAT_RUNTIME'}

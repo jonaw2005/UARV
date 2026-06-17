@@ -186,6 +186,12 @@ body {
   padding: 22px;
 }
 
+.action-link {
+  color: #1fb4ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .action-btn {
   min-height: 58px;
   border: none;
