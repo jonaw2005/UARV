@@ -476,7 +476,7 @@ class MAVBridge:
                 raise TimeoutError("No MISSION_REQUEST received")
 
             item = mission_items[msg.seq]
-
+            print(item)
             self._send_mission_item(msg.seq, item)
 
         ack = self.master.recv_match(

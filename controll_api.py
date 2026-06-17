@@ -387,6 +387,7 @@ def upload_mission():
     mission_json = sorted(data["mission"], key=lambda x: x["seq"])
 
     mav_items = translate_mission(mission_json)
+    print(mav_items)
     run_task(bridge.upload_mission, mav_items)
 #    try:
 #        future = run_task(bridge.upload_mission, mav_items)
