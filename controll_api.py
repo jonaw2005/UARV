@@ -214,6 +214,14 @@ def get_health():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/get_location', methods=['GET'])
+def get_location():
+    try:
+        future = run_task(bridge.get_location)
+        location = future.result(timeout=10)
+        return jsonify(location)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', port=8000, threaded=True)

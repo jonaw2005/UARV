@@ -317,6 +317,15 @@ class MAVBridge:
     def get_health(self):
         # return a shallow copy of health dictionary
         return dict(self.health)
+    
+    def get_location(self):
+        telemetry = self.get_telemetry()
+        return {
+            'lat': telemetry.get('lat'),
+            'lon': telemetry.get('lon'),
+            'altitude': telemetry.get('altitude'),
+            'relative_altitude': telemetry.get('relative_altitude'),
+        }
         
 
 if __name__ == "__main__":
