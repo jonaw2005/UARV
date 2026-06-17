@@ -63,40 +63,6 @@ class MAVBridge:
         self.master.arduplane_disarm()
 
 
-    def set_mode(self, mode):
-        self.master.set_mode(mode)
-
-
-    def set_velocity(self, vx, vy, vz):
-        """
-        Set local velocity in NED frame (m/s)
-        vx: forward (+ North)
-        vy: right (+ East)
-        vz: down (+ Down, positive = sink)
-        """
-
-        # Bitmask: ignore position + acceleration + yaw
-        type_mask = (
-            0b0000111111000111
-        )
-
-        self.master.mav.set_position_target_local_ned_send(
-            0,  # time_boot_ms (0 = ignore)
-            self.master.target_system,
-            self.master.target_component,
-
-            mu.mavlink.MAV_FRAME_LOCAL_NED,
-
-            type_mask,
-
-            0, 0, 0,        # position (ignored)
-            vx, vy, vz,     # velocity (used)
-
-            0, 0, 0,        # acceleration (ignored)
-            0, 0            # yaw, yaw_rate (ignored)
-        )
-
-
     def goto(self, lat, lon, alt):
             """
             Send a GPS waypoint (global position target).
@@ -327,6 +293,221 @@ class MAVBridge:
             'relative_altitude': telemetry.get('relative_altitude'),
         }
         
+
+
+
+# -----------------------------
+    # VELOCITY CONTROL (dein Beispiel)
+    # -----------------------------
+    def set_velocity(self, vx, vy, vz):
+        """
+        Local NED velocity (m/s)
+        vx: North (+)
+        vy: East (+)
+        vz: Down (+)
+        """
+
+        type_mask = 0b0000111111000111
+
+        self.master.mav.set_position_target_local_ned_send(
+            0,
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_FRAME_LOCAL_NED,
+            type_mask,
+            0, 0, 0,
+            vx, vy, vz,
+            0, 0, 0,
+            0, 0
+        )
+
+    # -----------------------------
+    # TAKEOFF (GUIDED MODE)
+    # -----------------------------
+    def takeoff(self, altitude):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_NAV_TAKEOFF,
+            0,
+            0, 0, 0, 0,
+            0, 0,
+            altitude
+        )
+
+    # -----------------------------
+    # RTL
+    # -----------------------------
+    def rtl(self):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+            0,
+            0, 0, 0, 0, 0, 0, 0
+        )
+
+    # -----------------------------
+    # LAND
+    # -----------------------------
+    def land(self):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_NAV_LAND,
+            0,
+            0, 0, 0, 0, 0, 0, 0
+        )
+
+    # -----------------------------
+    # CHANGE SPEED
+    # -----------------------------
+    def set_speed(self, speed, airspeed=True):
+        speed_type = 0 if airspeed else 1
+
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_DO_CHANGE_SPEED,
+            0,
+            speed_type,
+            speed,
+            -1,
+            0, 0, 0, 0
+        )
+
+    # -----------------------------
+    # CONDITION YAW
+    # -----------------------------
+    def condition_yaw(self, heading, relative=False, speed=0, direction=0):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_CONDITION_YAW,
+            0,
+            heading,
+            speed,
+            direction,
+            int(relative),
+            0, 0, 0
+        )
+
+    # -----------------------------
+    # LOITER TIME (guided trigger)
+    # -----------------------------
+    def loiter_time(self, seconds):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_NAV_LOITER_TIME,
+            0,
+            seconds,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        )
+
+    # -----------------------------
+    # CHANGE ALTITUDE (guided)
+    # -----------------------------
+    def change_altitude(self, altitude):
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mu.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE,
+            0,
+            altitude,
+            0, 0, 0, 0, 0, 0
+        )
+
+    # -----------------------------
+    # SET MODE (optional but useful)
+    # -----------------------------
+    def set_mode(self, mode):
+        mode_mapping = self.master.mode_mapping()
+
+        if mode not in mode_mapping:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        mode_id = mode_mapping[mode]
+
+        self.master.mav.set_mode_send(
+            self.master.target_system,
+            mu.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            mode_id
+        )
+
+
+
+ # --------------------------------------------------
+    # PUBLIC: Mission Upload Entry Point
+    # --------------------------------------------------
+    def upload_mission(self, mission_items):
+        """
+        mission_items = already translated MAVLink-ready list
+        """
+
+        self.master.mav.mission_clear_all_send(
+            self.master.target_system,
+            self.master.target_component
+        )
+
+        time.sleep(0.2)
+
+        count = len(mission_items)
+
+        self.master.mav.mission_count_send(
+            self.master.target_system,
+            self.master.target_component,
+            count
+        )
+
+        for i in range(count):
+            msg = self.master.recv_match(
+                type="MISSION_REQUEST",
+                blocking=True,
+                timeout=5
+            )
+
+            if not msg:
+                raise TimeoutError("No MISSION_REQUEST received")
+
+            item = mission_items[msg.seq]
+
+            self._send_mission_item(msg.seq, item)
+
+        ack = self.master.recv_match(
+            type="MISSION_ACK",
+            blocking=True,
+            timeout=10
+        )
+
+        return str(ack)
+
+    # --------------------------------------------------
+    # INTERNAL: send single item
+    # --------------------------------------------------
+    def _send_mission_item(self, seq, item):
+
+        self.master.mav.mission_item_int_send(
+            self.master.target_system,
+            self.master.target_component,
+            seq,
+            item["frame"],
+            item["command"],
+            0, 1,
+            item.get("param1", 0),
+            item.get("param2", 0),
+            item.get("param3", 0),
+            item.get("param4", 0),
+            item.get("lat", 0),
+            item.get("lon", 0),
+            item.get("alt", 0)
+        )
+
 
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)

@@ -9,7 +9,7 @@ from flask_socketio import SocketIO
 import base64
 import time
 import atexit
-
+from pymavlink import mavutil
 
 from mav_bridge import MAVBridge
 
@@ -267,6 +267,131 @@ def get_location():
         return jsonify(location)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# --------------------------------------------------
+# TRANSLATOR (JSON → MAVLink Items)
+# --------------------------------------------------
+def translate_mission(json_mission):
+    items = []
+
+    for item in json_mission:
+
+        t = item["type"]
+
+        # ---------------- WAYPOINT ----------------
+        if t == "waypoint":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                "command": mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                "lat": int(item["lat"] * 1e7),
+                "lon": int(item["lon"] * 1e7),
+                "alt": 50
+            })
+
+        # ---------------- TAKEOFF ----------------
+        elif t == "action" and item["action"] == "takeoff":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                "command": mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                "alt": float(item["param"])
+            })
+
+        # ---------------- LOITER ----------------
+        elif t == "action" and item["action"] == "loiter":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
+                "param1": float(item["param"])
+            })
+
+        # ---------------- RTL ----------------
+        elif t == "action" and item["action"] == "rtl":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH
+            })
+
+        # ---------------- LAND ----------------
+        elif t == "action" and item["action"] == "land":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_NAV_LAND
+            })
+
+        # ---------------- SPEED ----------------
+        elif t == "action" and item["action"] == "set_speed":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED,
+                "param1": 0,
+                "param2": float(item["param"])
+            })
+
+        # ---------------- ALT CHANGE ----------------
+        elif t == "action" and item["action"] == "change_alt":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE,
+                "param1": float(item["param"])
+            })
+
+        # ---------------- DELAY ----------------
+        elif t == "action" and item["action"] == "delay":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_NAV_DELAY,
+                "param1": float(item["param"])
+            })
+
+        # ---------------- YAW ----------------
+        elif t == "action" and item["action"] == "condition_yaw":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_CONDITION_YAW,
+                "param1": float(item["param"])
+            })
+
+        # ---------------- LAND START ----------------
+        elif t == "action" and item["action"] == "land_start":
+            items.append({
+                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "command": mavutil.mavlink.MAV_CMD_DO_LAND_START
+            })
+
+    # sort by seq (important)
+    return items
+
+
+# --------------------------------------------------
+# ENDPOINT
+# --------------------------------------------------
+@app.route("/mission_upload", methods=["POST"])
+def upload_mission():
+    data = request.get_json(force=True)
+
+    if not data or "mission" not in data:
+        return jsonify({"error": "missing mission"}), 400
+
+    mission_json = sorted(data["mission"], key=lambda x: x["seq"])
+
+    mav_items = translate_mission(mission_json)
+
+    try:
+        future = run_task(bridge.upload_mission, mav_items)
+        response = future.result(timeout=15)
+        return jsonify(response), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({
+        "status": "upload_started",
+        "task_id": task_id,
+        "items": len(mav_items)
+    })
+
+
+
 
 
 def cleanup():
