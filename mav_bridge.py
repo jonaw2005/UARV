@@ -7,7 +7,7 @@ Install dependency: pip install pymavlink
 from pymavlink import mavutil as mu
 import threading
 import time
-
+import logging
 
 class MAVBridge:
     def __init__(self, connection_string, baud=115200, source_system=255, target_system=1, target_component=1):
@@ -36,6 +36,9 @@ class MAVBridge:
         }
         self._health_thread = None
 
+        self.logger = logging.getLogger("MAVBridge")
+        logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
+    
 
     def connect(self, timeout=30):
         self.master = mu.mavlink_connection(
@@ -476,7 +479,7 @@ class MAVBridge:
                 raise TimeoutError("No MISSION_REQUEST received")
 
             item = mission_items[msg.seq]
-            print(item)
+            self.logger.info(f"Uploading mission item {msg.seq+1}/{count}: {item}")
             self._send_mission_item(msg.seq, item)
 
         ack = self.master.recv_match(
