@@ -29,7 +29,7 @@ def create_connection(connection_string, source_system=255, timeout=10):
         f"Heartbeat received from system {master.target_system}, component {master.target_component}"
     )
     
-
+    return master
 
 def request_params(master):
     print("Requesting parameter list...")
@@ -55,6 +55,7 @@ def main():
     timeout = 10
     try:
         master = create_connection(connection, timeout=timeout)
+        print("Connection established successfully.\n\n")
         request_params(master)
     except Exception as exc:
         print("Connection failed:", exc)
