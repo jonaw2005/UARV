@@ -95,8 +95,16 @@ function refreshMissionList() {
       if (item.missionMarker) {
         plannerMap.removeLayer(item.missionMarker);
       }
+      // Remove from waypoints array if it's a waypoint
+      if (item.type === 'waypoint') {
+        const wpIndex = waypoints.findIndex(wp => wp.lat === item.lat && wp.lon === item.lon);
+        if (wpIndex !== -1) {
+          waypoints.splice(wpIndex, 1);
+        }
+      }
       missionItems.splice(index, 1);
       refreshMissionList();
+      refreshWaypointList();
     });
     setupMissionDragEvents(row);
     missionList.appendChild(row);
