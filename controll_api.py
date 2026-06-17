@@ -8,6 +8,7 @@ import cv2
 from flask_socketio import SocketIO
 import base64
 import time
+import atexit
 
 
 from mav_bridge import MAVBridge
@@ -16,11 +17,14 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 started = False
+running = True
 
 def start_background():
     global started
+    global running
     if not started:
         started = True
+        running = True
         socketio.start_background_task(stream_video)
 
 @socketio.on("connect")
@@ -63,7 +67,8 @@ print("Using camera:", cam_index)
 
 def stream_video():
     #print("vor while true")
-    while True:
+    global running, camera
+    while running:
             #print("vor camera.read()")
             success, frame = camera.read()
             if not success:
@@ -257,6 +262,16 @@ def get_location():
         return jsonify(location)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def cleanup():
+    global running, camera, bridge, executor
+    running = False
+    print("Cleaning up resources...")
+    camera.release()
+    bridge.close()
+    executor.shutdown(wait=False)
+
 
 
 if __name__ == '__main__':
