@@ -1,5 +1,7 @@
 from pymavlink import mavutil
 import sys
+import time
+import json
 
 con = "/dev/ttyAMA0"
 master = None
@@ -36,20 +38,44 @@ try:
 #        mavutil.mavlink.MAV_MISSION_TYPE_ALL
     )
 
-    for i in range(20):
-        try:
-            msg = master.recv_match(type=["PARAM_VALUE", "HEARTBEAT"], blocking=True, timeout=5)
-            if not msg:
-                print("No more messages received.")
-                break
-            print(msg)
-            if msg.get_type() == "PARAM_VALUE":
-                continue
-        except Exception as e:
-            print(f"Error receiving message {i}: {e}", file=sys.stderr)
+
+    params = {}
+
+    last_time = time.time()
+
+    while True:
+        msg = master.recv_match(type='PARAM_VALUE', blocking=False)
+
+        if msg:
+            name = msg.param_id.decode('utf-8').strip('\x00')
+            params[name] = float(msg.param_value)
+            last_time = time.time()
+            print(name, params[name])
+
+        # Stop wenn 3 Sekunden nichts mehr kommt
+        if time.time() - last_time > 3:
             break
 
-    print("Finished requesting parameters.")
+    print("Fertig:", len(params), "Parameter")
+
+    with open("params.json", "w") as f:
+        json.dump(params, f, indent=2)
+    
+    print("Parameter saved to params.json")
+#    for i in range(20):
+#        try:
+#            msg = master.recv_match(type=["PARAM_VALUE", "HEARTBEAT"], blocking=True, timeout=5)
+#            if not msg:
+#                print("No more messages received.")
+#                break
+#            print(msg)
+#            if msg.get_type() == "PARAM_VALUE":
+#                continue
+#        except Exception as e:
+#            print(f"Error receiving message {i}: {e}", file=sys.stderr)
+#            break
+#
+#    print("Finished requesting parameters.")
 
 except Exception as e:
     print(f"Connection error: {e}", file=sys.stderr)
