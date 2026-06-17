@@ -12,4 +12,12 @@ if (mapOverlay) {
   mapOverlay.classList.remove('hidden');
 }
 
+const map = L.map('map').setView([47.66, 9.48], 13);
+
+// OpenStreetMap Layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
 // If you want to re-enable the map later, restore the original map.js content.
