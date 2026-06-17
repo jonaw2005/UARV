@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PORT="/dev/serial0"
-BAUD="921600"
+PORT="/dev/ttyAMA0"
+BAUD="57600"
 
 echo "Listening on $PORT at $BAUD ... (CTRL+C to stop)"
 
