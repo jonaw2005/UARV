@@ -32,30 +32,30 @@ try:
 #    except Exception as e:
 #        print(f"Error retrieving MAVLink version: {e}", file=sys.stderr)
 
-#    print("Requesting parameter list...")
-#    master.mav.param_request_list_send(
-#        master.target_system,
-#        master.target_component,
+    print("Requesting parameter list...")
+    master.mav.param_request_list_send(
+        master.target_system,
+        master.target_component
 #        mavutil.mavlink.MAV_MISSION_TYPE_ALL
-#    )
+    )
 
-    print("Requesting parameters...")
-    master.mav.param_request_list_send(1,1)
+#    print("Requesting parameters...")
+#    master.mav.param_request_list_send(1,1)
 
-    received = master.recv_msg()
+#    received = master.recv_msg()
 
-    print("Received message:", received)
+#    print("Received message:", received)
 
     params = {}
 
     last_time = time.time()
 
     while True:
-        msg = master.recv_match(type='PARAM_VALUE', blocking=False)
+        msg = master.recv_match(type='PARAM_VALUE', blocking=True, timeout=5)
 
         if msg:
-            name = msg.param_id.decode('utf-8').strip('\x00')
-            params[name] = float(msg.param_value)
+            name = msg.param_id.decode().strip('\x00')
+            params[name] = msg.param_value
             last_time = time.time()
             print(name, params[name])
 
