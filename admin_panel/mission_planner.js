@@ -425,10 +425,23 @@ function exportMissionToJSON() {
   return missionJSON;
 }
 
-uploadMissionBtn.addEventListener('click', () => {
+uploadMissionBtn.addEventListener('click', async () => {
   const missionJSON = exportMissionToJSON();
   console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
-  alert(`Mission uploaded with ${missionItems.length} item(s).\n\nJSON:\n${JSON.stringify(missionJSON, null, 2)}`);
+  try {
+    const response = await fetch('http://192.168.0.105/api/mission_upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(missionJSON),
+    });
+    if (response.ok) {
+      alert(`Mission uploaded successfully with ${missionItems.length} item(s).`);
+    } else {
+      alert(`Upload failed with status ${response.status}.`);
+    }
+  } catch (error) {
+    alert(`Upload failed: ${error.message}`);
+  }
 });
 
 refreshWaypointList();
