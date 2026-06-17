@@ -14,11 +14,13 @@ from pymavlink import mavutil
 
 
 def create_connection(connection_string, source_system=255, timeout=10):
+    connection_string = "/dev/ttyAMA0"
     print(f"Opening MAVLink connection to {connection_string}")
     master = mavutil.mavlink_connection(
         connection_string,
         source_system=source_system,
         autoreconnect=True,
+        baud=57600
     )
 
     print("Waiting for heartbeat...")
@@ -26,8 +28,7 @@ def create_connection(connection_string, source_system=255, timeout=10):
     print(
         f"Heartbeat received from system {master.target_system}, component {master.target_component}"
     )
-    print("MAVLink version:", master.version)
-    return master
+    
 
 
 def request_params(master):
@@ -35,8 +36,6 @@ def request_params(master):
     master.mav.param_request_list_send(
         master.target_system,
         master.target_component,
-        0,
-        0,
     )
 
     for _ in range(20):
@@ -52,32 +51,11 @@ def request_params(master):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Test MAVLink connection")
-    parser.add_argument(
-        "--connection",
-        "-c",
-        default="udp:127.0.0.1:14550",
-        help="Connection string, e.g. udp:127.0.0.1:14550 or /dev/ttyUSB0:57600",
-    )
-    parser.add_argument(
-        "--timeout",
-        "-t",
-        type=int,
-        default=10,
-        help="Heartbeat timeout in seconds",
-    )
-    parser.add_argument(
-        "--params",
-        "-p",
-        action="store_true",
-        help="Request parameter list after heartbeat",
-    )
-    args = parser.parse_args()
-
+    connection = "/dev/ttyAMA0"
+    timeout = 10
     try:
-        master = create_connection(args.connection, timeout=args.timeout)
-        if args.params:
-            request_params(master)
+        master = create_connection(connection, timeout=timeout)
+        request_params(master)
     except Exception as exc:
         print("Connection failed:", exc)
         sys.exit(1)
