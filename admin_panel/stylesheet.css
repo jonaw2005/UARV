@@ -134,9 +134,36 @@ body {
   text-transform: uppercase;
 }
 
+.info-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .info-card span {
   color: #eef2ff;
   font-size: 0.98rem;
+}
+
+.refresh-btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(30, 60, 95, 0.95);
+  color: #eef2ff;
+  padding: 8px 14px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.refresh-btn:hover {
+  background: rgba(48, 95, 160, 0.95);
+  transform: translateY(-1px);
+}
+
+.refresh-btn:active {
+  transform: translateY(0);
 }
 
 .panel-actions {

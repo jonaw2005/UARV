@@ -46,6 +46,3 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 
 
-
-
-// If you want to re-enable the map later, restore the original map.js content.
