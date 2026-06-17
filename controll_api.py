@@ -92,6 +92,33 @@ def goto():
     return jsonify({'status': 'goto requested', 'task_id': id(future)})
 
 
+@app.route('/get_param', methods=['POST'])
+def get_param():
+    data = request.get_json(force=True)
+    if not data or 'name' not in data:
+        return jsonify({'error': 'name is required'}), 400
+
+    try:
+        future = run_task(bridge.get_param, data['name'])
+        value = future.result(timeout=10)
+        return jsonify({'name': data['name'], 'value': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/get_param_test', methods=['GET'])
+def get_param_test():
+    
+    data = {'name': 'STAT_RUNTIME'}
+
+    try:
+        future = run_task(bridge.get_param, data['name'])
+        value = future.result(timeout=10)
+        return jsonify({'name': data['name'], 'value': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/telemetry', methods=['GET'])
 def telemetry():
     with state_lock:
@@ -101,6 +128,7 @@ def telemetry():
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'})
+
 
 
 if __name__ == '__main__':
