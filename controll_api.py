@@ -108,13 +108,22 @@ def get_param():
 
 @app.route('/get_param_test', methods=['GET'])
 def get_param_test():
-    
     data = {'name': 'STAT_RUNTIME'}
 
     try:
         future = run_task(bridge.get_param, data['name'])
         value = future.result(timeout=10)
         return jsonify({'name': data['name'], 'value': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/get_all_params', methods=['GET'])
+def get_all_params():
+    try:
+        future = run_task(bridge.get_all_params)
+        params = future.result(timeout=60)
+        return jsonify(params)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
