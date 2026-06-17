@@ -53,7 +53,7 @@ function buildModeDropdown(modeButton) {
   dropdown.style.cssText = `
     display: none;
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     left: 0;
     right: 0;
     z-index: 100;
@@ -61,7 +61,7 @@ function buildModeDropdown(modeButton) {
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     overflow: hidden;
-    margin-top: 4px;
+    margin-bottom: 4px;
   `;
 
   MODES.forEach((mode) => {
