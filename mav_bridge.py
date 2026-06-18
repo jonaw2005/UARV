@@ -743,6 +743,18 @@ class MAVBridge:
                     raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
 
 
+    def start_rc_override(self):
+        while True:
+            self.master.mav.rc_channels_override_send(
+                self.master.target_system,
+                self.master.target_component,
+                1500, 1500, 1000, 1500,
+                0, 0, 0, 0
+            )
+            time.sleep(0.1)
+
+
+
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     bridge.connect()

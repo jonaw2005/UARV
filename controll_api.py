@@ -280,6 +280,16 @@ def get_location():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/rc_override', methods=['GET'])
+def rc_override():
+    try:
+        future = run_task(bridge.rc_override)
+        result = future.result(timeout=10)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/battery_level', methods=['GET'])
 def battery_level():
     try:
