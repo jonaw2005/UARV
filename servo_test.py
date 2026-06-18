@@ -121,11 +121,33 @@ def test_single_servo(master, channel: int):
         time.sleep(1.5)
 
 
-def list_channels_interactive(master):
+def test_all_servos(master, max_channel: int = 8, sweep: bool = False):
+    """
+    Test all servos from channel 1 to max_channel one after another.
+
+    Args:
+        master: mavutil connection
+        max_channel: Highest channel number to test (default 8)
+        sweep: If True, run full sweep on each channel; otherwise quick test
+    """
+    print(f"\n=== Testing all servos (1-{max_channel}) ===")
+    for ch in range(1, max_channel + 1):
+        if sweep:
+            run_servo_sweep(master, ch)
+        else:
+            test_single_servo(master, ch)
+        # Small pause between channels
+        time.sleep(0.5)
+    print("\nAll servos tested.")
+
+
+def list_channels_interactive(master, max_channel: int = 8):
     """Interactive mode: let user test individual channels."""
     print("\n=== Interactive Servo Test ===")
     print("Enter channel numbers to test, or 'q' to quit.")
-    print("Enter 'sweep <channel>' for a full sweep test.\n")
+    print("Enter 'sweep <channel>' for a full sweep test.")
+    print("Enter 'all' to test every servo quickly.")
+    print("Enter 'all sweep' to sweep every servo.\n")
 
     while True:
         try:
@@ -134,14 +156,18 @@ def list_channels_interactive(master):
                 continue
             if cmd.lower() == 'q':
                 break
-            if cmd.lower().startswith('sweep '):
+            if cmd.lower() == 'all sweep':
+                test_all_servos(master, max_channel, sweep=True)
+            elif cmd.lower() == 'all':
+                test_all_servos(master, max_channel, sweep=False)
+            elif cmd.lower().startswith('sweep '):
                 channel = int(cmd.split()[1])
                 run_servo_sweep(master, channel)
             else:
                 channel = int(cmd)
                 test_single_servo(master, channel)
         except (ValueError, IndexError):
-            print("Usage: <channel_number> or 'sweep <channel_number>' or 'q'")
+            print("Usage: <channel_number> or 'sweep <channel_number>' or 'all' or 'all sweep' or 'q'")
         except KeyboardInterrupt:
             print("\nExiting interactive mode.")
             break
