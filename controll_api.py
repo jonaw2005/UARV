@@ -487,15 +487,15 @@ def takeoff():
 def is_armed():
     future = run_task(bridge.is_armed)
     armed = future.result()
-    return armed
+    return str(armed)
 
 
 @app.route("/arm_disarm", methods=["GET"])
 def arm_disarm():
-    if is_armed():
+    if is_armed() == "True":
         future = run_task(bridge.disarm)
         return jsonify({"status": "disarm requested", "task_id": id(future)})
-    elif not is_armed():
+    elif is_armed() == "False":
         future = run_task(bridge.arm)
         return jsonify({"status": "arm requested", "task_id": id(future)})
     else:
