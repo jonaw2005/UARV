@@ -22,16 +22,11 @@ function hideCameraError() {
 }
 
 function initCameraStream() {
-  cameraUrl.textContent = SOCKET_SERVER;
+  // Display the actual Socket.IO connection URL
+  cameraUrl.textContent = window.location.origin;
   if (!cameraVideo) {
     return;
   }
-  /**
-  const socket = io(window.location.origin, {
-    path: "/socket.io",
-    transports: ['websocket']
-  });
-  **/
 
   const socket  = io(window.location.origin)
 
