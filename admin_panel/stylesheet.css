@@ -92,6 +92,24 @@ body {
   min-height: 100%;
 }
 
+/* ── Plane heading marker ──────────────────────────────── */
+.plane-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.plane-symbol {
+  font-size: 28px;
+  color: #1fb4ff;
+  text-shadow:
+    0 0 8px rgba(31, 180, 255, 0.6),
+    0 0 16px rgba(31, 180, 255, 0.3);
+  line-height: 1;
+  text-align: center;
+  transition: transform 0.3s ease;
+  transform-origin: center center;
+}
+
 .panel-overlay {
   position: absolute;
   inset: 0;
@@ -145,6 +163,18 @@ body {
   width: 100%;
   min-height: 0;
   margin: 0;
+}
+
+.info-card-btn-group {
+  flex: 1 1 220px;
+  min-width: 160px;
+  display: flex;
+  gap: 8px;
+}
+
+.info-card-btn-group .refresh-btn {
+  flex: 1;
+  min-width: 0;
 }
 
 .info-card span {
