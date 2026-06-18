@@ -273,6 +273,18 @@ def get_gps():
     try:
         future = run_task(bridge.get_gps_int)
         gps = future.result(timeout=10)
+
+        # If lat or lon are 0, fall back to GPS_RAW_INT values
+        lat = gps.get('lat')
+        lon = gps.get('lon')
+        if lat == 0 or lon == 0 or lat is None or lon is None:
+            future_raw = run_task(bridge.get_gps_raw)
+            gps_raw = future_raw.result(timeout=10)
+            if gps_raw.get('lat') not in (0, None):
+                gps['lat'] = gps_raw['lat']
+            if gps_raw.get('lon') not in (0, None):
+                gps['lon'] = gps_raw['lon']
+
         return jsonify(gps)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
