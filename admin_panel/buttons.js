@@ -119,6 +119,42 @@ function buildModeDropdown(modeButton) {
   return { wrapper, dropdown };
 }
 
+// ── Arm status polling ─────────────────────────────────────────────────────
+
+let armPollInterval = null;
+
+function startArmStatusPoll() {
+  const armBtn = document.getElementById('armDisarmBtn');
+  if (!armBtn) return;
+  const statusSpan = armBtn.querySelector('.btn-sub-text');
+
+  async function poll() {
+    try {
+      const data = await apiGet('/is_armed');
+      if (data === null || data === undefined) {
+        statusSpan.textContent = 'Status: Error';
+        return;
+      }
+      // data could be { armed: true/false } or a bare boolean
+      const armed = typeof data === 'object' ? data.armed : !!data;
+      statusSpan.textContent = armed ? 'Status: ✅ ARMED' : 'Status: ⛔ DISARMED';
+    } catch {
+      statusSpan.textContent = 'Status: Unreachable';
+    }
+  }
+
+  // Poll every 2 seconds
+  poll();
+  armPollInterval = setInterval(poll, 2000);
+}
+
+function stopArmStatusPoll() {
+  if (armPollInterval) {
+    clearInterval(armPollInterval);
+    armPollInterval = null;
+  }
+}
+
 // ── Button setup ────────────────────────────────────────────────────────────
 
 function setupActionButtons() {
@@ -129,6 +165,7 @@ function setupActionButtons() {
   buttons[0].disabled = false;
   buttons[0].id = 'armDisarmBtn';
   buttons[0].addEventListener('click', arm_disarm);
+  startArmStatusPoll();
 
   // Mode Selection
   buttons[1].disabled = false;
