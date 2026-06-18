@@ -670,43 +670,44 @@ class MAVBridge:
         """
         mission_items = already translated MAVLink-ready list
         """
+        with self._master_lock:
 
-        self.master.mav.mission_clear_all_send(
-            self.master.target_system,
-            self.master.target_component
-        )
-
-        time.sleep(0.2)
-
-        count = len(mission_items)
-
-        self.master.mav.mission_count_send(
-            self.master.target_system,
-            self.master.target_component,
-            count
-        )
-
-        for i in range(count):
-            msg = self.master.recv_match(
-                type="MISSION_REQUEST",
-                blocking=True,
-                timeout=5
+            self.master.mav.mission_clear_all_send(
+                self.master.target_system,
+                self.master.target_component
             )
 
-            if not msg:
-                raise TimeoutError("No MISSION_REQUEST received")
+            time.sleep(0.2)
 
-            item = mission_items[msg.seq]
-            self.logger.info(f"Uploading mission item {msg.seq+1}/{count}: {item}")
-            self._send_mission_item(msg.seq, item)
+            count = len(mission_items)
 
-        ack = self.master.recv_match(
-            type="MISSION_ACK",
-            blocking=True,
-            timeout=10
-        )
+            self.master.mav.mission_count_send(
+                self.master.target_system,
+                self.master.target_component,
+                count
+            )
 
-        return str(ack)
+            for i in range(count):
+                msg = self.master.recv_match(
+                    type="MISSION_REQUEST",
+                    blocking=True,
+                    timeout=5
+                )
+
+                if not msg:
+                    raise TimeoutError("No MISSION_REQUEST received")
+
+                item = mission_items[msg.seq]
+                self.logger.info(f"Uploading mission item {msg.seq+1}/{count}: {item}")
+                self._send_mission_item(msg.seq, item)
+
+            ack = self.master.recv_match(
+                type="MISSION_ACK",
+                blocking=True,
+                timeout=10
+            )
+
+            return str(ack)
 
     # --------------------------------------------------
     # INTERNAL: send single item
@@ -738,48 +739,49 @@ class MAVBridge:
         Holt komplette Mission vom Pixhawk (ArduPlane)
         und gibt sie als strukturierte Liste zurück
         """
+        with self._master_lock:
 
-        mission = []
+            mission = []
 
-        # 1. Request Mission List
-        self.master.mav.mission_request_list_send(
-            self.master.target_system,
-            self.master.target_component
-        )
-
-        # 2. Warten auf Anzahl
-        msg = self.master.recv_match(
-            type="MISSION_COUNT",
-            blocking=True,
-            timeout=5
-        )
-
-        if not msg:
-            raise TimeoutError("No MISSION_COUNT received")
-
-        count = msg.count
-
-        # 3. Items einzeln anfordern
-        for seq in range(count):
-
-            self.master.mav.mission_request_int_send(
+            # 1. Request Mission List
+            self.master.mav.mission_request_list_send(
                 self.master.target_system,
-                self.master.target_component,
-                seq
+                self.master.target_component
             )
 
-            item = self.master.recv_match(
-                type=["MISSION_ITEM_INT", "MISSION_ITEM"],
+            # 2. Warten auf Anzahl
+            msg = self.master.recv_match(
+                type="MISSION_COUNT",
                 blocking=True,
                 timeout=5
             )
 
-            if not item:
-                raise TimeoutError(f"No mission item for seq {seq}")
+            if not msg:
+                raise TimeoutError("No MISSION_COUNT received")
 
-            mission.append(self._parse_mission_item(item))
+            count = msg.count
 
-        return mission
+            # 3. Items einzeln anfordern
+            for seq in range(count):
+
+                self.master.mav.mission_request_int_send(
+                    self.master.target_system,
+                    self.master.target_component,
+                    seq
+                )
+
+                item = self.master.recv_match(
+                    type=["MISSION_ITEM_INT", "MISSION_ITEM"],
+                    blocking=True,
+                    timeout=5
+                )
+
+                if not item:
+                    raise TimeoutError(f"No mission item for seq {seq}")
+
+                mission.append(self._parse_mission_item(item))
+
+            return mission
 
     # --------------------------------------------------
     # INTERNAL: MAVLink → JSON
