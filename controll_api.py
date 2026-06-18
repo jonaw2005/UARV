@@ -280,6 +280,16 @@ def get_location():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/battery_level', methods=['GET'])
+def battery_level():
+    try:
+        future = run_task(bridge.battery_level)
+        battery = future.result(timeout=10)
+        return jsonify(battery)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # --------------------------------------------------
 # TRANSLATOR (JSON → MAVLink Items)
 # --------------------------------------------------

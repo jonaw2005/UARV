@@ -287,6 +287,47 @@ class MAVBridge:
         # return a shallow copy of health dictionary
         return dict(self.health)
     
+    def battery_level(self, timeout=3):
+        """
+        Request and return battery status from the autopilot.
+
+        Returns a dict with:
+            voltage  (float, V)
+            current  (float, A)
+            remaining (int, percent 0-100)
+
+        Returns None fields if data not received within timeout.
+        """
+        with self._master_lock:
+            try:
+                self.master.mav.request_data_stream_send(
+                    self.master.target_system,
+                    self.master.target_component,
+                    mu.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,
+                    1,
+                    1,
+                )
+            except Exception:
+                pass
+
+            start = time.time()
+            end = start + timeout
+            while time.time() < end:
+                msg = self.master.recv_match(type='SYS_STATUS', blocking=True, timeout=0.5)
+                if msg:
+                    return {
+                        'voltage': msg.voltage_battery / 1000.0 if msg.voltage_battery is not None else None,
+                        'current': msg.current_battery / 100.0 if msg.current_battery is not None else None,
+                        'remaining': msg.battery_remaining if msg.battery_remaining is not None else None,
+                    }
+
+        # Fallback: return cached health values if SYS_STATUS wasn't received
+        return {
+            'voltage': self.health.get('battery_voltage'),
+            'current': self.health.get('battery_current'),
+            'remaining': self.health.get('battery_remaining'),
+        }
+    
     def get_location(self):
         telemetry = self.get_telemetry()
         return {
