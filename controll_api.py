@@ -268,6 +268,24 @@ def get_telemetry():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get_gps', methods=['GET'])
+def get_gps():
+    try:
+        future = run_task(bridge.get_gps_int)
+        gps = future.result(timeout=10)
+        return jsonify(gps)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/get_gps_raw', methods=['GET'])
+def get_gps_raw():
+    try:
+        future = run_task(bridge.get_gps_raw)
+        gps = future.result(timeout=10)
+        return jsonify(gps)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/get_health', methods=['GET'])
 def get_health():

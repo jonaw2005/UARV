@@ -292,6 +292,131 @@ class MAVBridge:
                 telemetry['load'] = msg.load / 10.0 if msg.load is not None else None
 
         return telemetry
+    
+    def get_gps_status(self, timeout=5):
+        with self._master_lock:
+            try:
+                self.master.mav.request_data_stream_send(
+                    self.master.target_system,
+                    self.master.target_component,
+                    mu.mavlink.MAV_DATA_STREAM_ALL,
+                    1,
+                    1,
+                )
+            except Exception:
+                pass
+
+        gps_status = {
+            'gps_fix_type': None,
+            'satellites_visible': None,
+        }
+
+        start = time.time()
+        end = start + timeout
+        while time.time() < end:
+            with self._master_lock:
+                msg = self.master.recv_match(blocking=True, timeout=0.5)
+            if msg is None:
+                continue
+
+            if msg.get_type() == 'GPS_RAW_INT':
+                gps_status['gps_fix_type'] = msg.fix_type
+                gps_status['satellites_visible'] = msg.satellites_visible
+                break
+
+        return gps_status
+    
+    def get_gps_raw(self, timeout=5, hz: int = 5):
+        interval_us = int(1e6 / hz)
+        with self._master_lock:
+            try:
+                self.master.mav.command_long_send(
+                    self.target_system,
+                    self.target_component,
+                    mu.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+                    0,
+                    mu.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT,
+                    interval_us,
+                    0, 0, 0, 0, 0
+                )
+            except Exception:
+                pass
+
+        gps_raw = {
+            'lat': None,
+            'lon': None,
+            'altitude': None,
+            'relative_altitude': None,
+            'groundspeed': None,
+            'heading': None,
+        }
+
+        start = time.time()
+        end = start + timeout
+        while time.time() < end:
+            with self._master_lock:
+                msg = self.master.recv_match(blocking=True, timeout=0.5)
+            if msg is None:
+                continue
+
+            if msg.get_type() == 'GPS_RAW_INT':
+                gps_raw['lat'] = msg.lat / 1e7
+                gps_raw['lon'] = msg.lon / 1e7
+                gps_raw['altitude'] = msg.alt / 1000.0
+                gps_raw['relative_altitude'] = msg.relative_alt / 1000.0
+                if hasattr(msg, 'hdg') and msg.hdg != 65535:
+                    gps_raw['heading'] = msg.hdg / 100.0
+                if hasattr(msg, 'velocity'):
+                    gps_raw['groundspeed'] = msg.velocity / 100.0
+                break
+
+        return gps_raw
+    
+    def get_gps_int(self, timeout=5, hz: int=5):
+        interval_us = int(1e6 / hz)
+        with self._master_lock:
+            try:
+                self.master.mav.command_long_send(
+                    self.target_system,
+                    self.target_component,
+                    mu.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+                    0,
+                    mu.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT,
+                    interval_us,
+                    0, 0, 0, 0, 0
+                )
+            except Exception:
+                pass
+
+        gps_int = {
+            'lat': None,
+            'lon': None,
+            'altitude': None,
+            'relative_altitude': None,
+            'groundspeed': None,
+            'heading': None,
+        }
+
+        start = time.time()
+        end = start + timeout
+        while time.time() < end:
+            with self._master_lock:
+                msg = self.master.recv_match(blocking=True, timeout=0.5)
+            if msg is None:
+                continue
+
+            if msg.get_type() == 'GLOBAL_POSITION_INT':
+                gps_int['lat'] = msg.lat / 1e7
+                gps_int['lon'] = msg.lon / 1e7
+                gps_int['altitude'] = msg.alt / 1000.0
+                gps_int['relative_altitude'] = msg.relative_alt / 1000.0
+                if hasattr(msg, 'hdg') and msg.hdg != 65535:
+                    gps_int['heading'] = msg.hdg / 100.0
+                if hasattr(msg, 'velocity'):
+                    gps_int['groundspeed'] = msg.velocity / 100.0
+                break
+
+        return gps_int
 
     def _health_loop(self):
         # continuously collect a small set of status messages into self.health
