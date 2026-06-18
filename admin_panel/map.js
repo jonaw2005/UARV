@@ -111,7 +111,48 @@ if (refreshLocationBtn) {
   });
 }
 
-// ── Telemetry button ────────────────────────────────────────────────────────
+// ── Telemetry overlay ───────────────────────────────────────────────────────
+
+const telemetryOverlay = document.getElementById('telemetryOverlay');
+const telemetryContent = document.getElementById('telemetryContent');
+const telemetryCloseBtn = document.getElementById('telemetryCloseBtn');
+
+function showTelemetryOverlay(data) {
+  if (!telemetryContent || !telemetryOverlay) return;
+
+  const entries = Object.entries(data).filter(([, v]) => v !== null && v !== undefined);
+  if (entries.length === 0) {
+    telemetryContent.innerHTML = '<p style="color: #a8b2c7; text-align: center;">No telemetry data available.</p>';
+  } else {
+    telemetryContent.innerHTML = entries.map(([key, val]) => {
+      const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const value = typeof val === 'number' ? val.toFixed(4) : val;
+      return `<div class="telemetry-row"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+    }).join('');
+  }
+
+  telemetryOverlay.classList.remove('hidden');
+}
+
+function hideTelemetryOverlay() {
+  if (telemetryOverlay) {
+    telemetryOverlay.classList.add('hidden');
+  }
+}
+
+// Close overlay when clicking the close button
+if (telemetryCloseBtn) {
+  telemetryCloseBtn.addEventListener('click', hideTelemetryOverlay);
+}
+
+// Close overlay when clicking the semi-transparent background
+if (telemetryOverlay) {
+  telemetryOverlay.addEventListener('click', (e) => {
+    if (e.target === telemetryOverlay) {
+      hideTelemetryOverlay();
+    }
+  });
+}
 
 const telemetryBtn = document.getElementById('telemetryBtn');
 if (telemetryBtn) {
@@ -121,25 +162,15 @@ if (telemetryBtn) {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-
-      // Build a formatted list of all telemetry fields
-      const lines = Object.entries(data)
-        .filter(([, v]) => v !== null && v !== undefined)
-        .map(([key, val]) => {
-          const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          const value = typeof val === 'number' ? val.toFixed(4) : val;
-          return `${label}: ${value}`;
-        });
-
-      if (lines.length === 0) {
-        alert('No telemetry data available.');
-        return;
-      }
-
-      alert(lines.join('\n'));
+      showTelemetryOverlay(data);
     } catch (err) {
       console.error('Telemetry fetch failed:', err);
-      alert('Failed to fetch telemetry data.');
+      if (telemetryContent) {
+        telemetryContent.innerHTML = '<p style="color: #e06c75; text-align: center;">Failed to fetch telemetry data.</p>';
+      }
+      if (telemetryOverlay) {
+        telemetryOverlay.classList.remove('hidden');
+      }
     }
   });
 }

@@ -102,6 +102,17 @@
         </section>
       </div>
     </div>
+    <!-- ── Telemetry overlay ──────────────────────────────── -->
+    <div id="telemetryOverlay" class="telemetry-overlay hidden">
+      <div class="telemetry-panel">
+        <div class="telemetry-header">
+          <strong>Telemetry Data</strong>
+          <button id="telemetryCloseBtn" class="telemetry-close-btn" type="button">&times;</button>
+        </div>
+        <div id="telemetryContent" class="telemetry-content"></div>
+      </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="camera.js"></script>

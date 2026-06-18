@@ -110,6 +110,80 @@ body {
   transform-origin: center center;
 }
 
+/* ── Telemetry overlay ─────────────────────────────────── */
+.telemetry-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.telemetry-panel {
+  background: rgba(14, 28, 39, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  max-width: 480px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+.telemetry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.telemetry-close-btn {
+  background: none;
+  border: none;
+  color: #a8b2c7;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.12s;
+}
+
+.telemetry-close-btn:hover {
+  color: #f8fafc;
+}
+
+.telemetry-content {
+  padding: 12px 20px 20px;
+}
+
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.92rem;
+}
+
+.telemetry-row:last-child {
+  border-bottom: none;
+}
+
+.telemetry-row .label {
+  color: #a8b2c7;
+  font-weight: 500;
+}
+
+.telemetry-row .value {
+  color: #eef2ff;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
 .panel-overlay {
   position: absolute;
   inset: 0;
