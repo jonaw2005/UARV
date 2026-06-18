@@ -677,9 +677,10 @@ class MAVBridge:
                 self.master.target_component
             )
 
-            time.sleep(0.2)
+            time.sleep(0.3)
 
             count = len(mission_items)
+            uploaded = 0
 
             self.master.mav.mission_count_send(
                 self.master.target_system,
@@ -687,19 +688,42 @@ class MAVBridge:
                 count
             )
 
-            for i in range(count):
+            while uploaded < count:
                 msg = self.master.recv_match(
-                    type="MISSION_REQUEST",
+                    type=["MISSION_REQUEST", "MISSION_REQUEST_INT"],
                     blocking=True,
                     timeout=5
                 )
 
                 if not msg:
-                    raise TimeoutError("No MISSION_REQUEST received")
+                    # Autopilot stopped requesting — re-send count to continue
+                    self.logger.warning(
+                        f"No request received, re-sending count ({uploaded}/{count})"
+                    )
+                    self.master.mav.mission_count_send(
+                        self.master.target_system,
+                        self.master.target_component,
+                        count
+                    )
+                    continue
 
-                item = mission_items[msg.seq]
-                self.logger.info(f"Uploading mission item {msg.seq+1}/{count}: {item}")
-                self._send_mission_item(msg.seq, item)
+                seq = msg.seq
+
+                # If the autopilot requests an item we already sent, skip stale
+                if seq < uploaded:
+                    self.logger.debug(f"Skipping stale request for seq {seq}")
+                    continue
+
+                # If seq jumped ahead, we can't handle that — abort
+                if seq != uploaded:
+                    raise RuntimeError(
+                        f"Autopilot requested seq {seq} but expected {uploaded}"
+                    )
+
+                item = mission_items[seq]
+                self.logger.info(f"Uploading mission item {seq+1}/{count}: {item}")
+                self._send_mission_item(seq, item)
+                uploaded += 1
 
             ack = self.master.recv_match(
                 type="MISSION_ACK",
@@ -707,6 +731,10 @@ class MAVBridge:
                 timeout=10
             )
 
+            if not ack:
+                raise TimeoutError("No MISSION_ACK received after upload")
+
+            self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}")
             return str(ack)
 
     # --------------------------------------------------

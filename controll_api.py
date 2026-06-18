@@ -449,6 +449,7 @@ def translate_mission(json_mission):
             })
 
     # sort by seq (important)
+    logging.info(f"Translated {len(items)} mission items")
     return items
 
 
