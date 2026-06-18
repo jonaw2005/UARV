@@ -165,7 +165,7 @@ def arm():
     return jsonify({'status': 'arming requested', 'task_id': id(future)})
 
 
-@app.route('/disarm', methods=['POST'])
+@app.route('/disarm', methods=['GET'])
 def disarm():
     future = run_task(bridge.disarm)
     return jsonify({'status': 'disarming requested', 'task_id': id(future)})
