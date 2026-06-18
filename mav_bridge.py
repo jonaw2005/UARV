@@ -697,14 +697,14 @@ class MAVBridge:
                 )
 
                 if not msg:
-                    # Autopilot stopped requesting — re-send count to continue
+                    # Autopilot stopped requesting — explicitly ask for the next item
                     self.logger.warning(
-                        f"No request received, re-sending count ({uploaded}/{count})"
+                        f"No request received, requesting seq {uploaded} ({uploaded}/{count})"
                     )
-                    self.master.mav.mission_count_send(
+                    self.master.mav.mission_request_int_send(
                         self.master.target_system,
                         self.master.target_component,
-                        count
+                        uploaded
                     )
                     continue
 
