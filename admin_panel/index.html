@@ -96,18 +96,35 @@
               <h1>Mission Planner</h1>
               <p>Open the mission planner interface</p>
             </div>
-            <a class="action-link" href="mission_planner.html">Open</a>
+          </div>
+          <div class="actions-grid">
+            <a class="action-btn mission-link" href="mission_planner.html">
+              <span class="btn-main-text">Open Mission Planner</span>
+            </a>
+            <button class="action-btn" id="downloadMissionBtn">
+              <span class="btn-main-text">Mission Order</span>
+              <span class="btn-sub-text">Download current mission</span>
+            </button>
           </div>
         </section>
       </div>
     </div>
     <!-- ── Telemetry floating window ──────────────────────── -->
-    <div id="telemetryWindow" class="telemetry-window hidden">
-      <div class="telemetry-header" id="telemetryDragHandle">
+    <div id="telemetryWindow" class="drag-window hidden">
+      <div class="drag-header" data-drag-handle>
         <strong>Telemetry Data</strong>
-        <button id="telemetryCloseBtn" class="telemetry-close-btn" type="button">&times;</button>
+        <button class="drag-close-btn" data-close-btn type="button">&times;</button>
       </div>
-      <div id="telemetryContent" class="telemetry-content"></div>
+      <div id="telemetryContent" class="drag-content"></div>
+    </div>
+
+    <!-- ── Mission Order floating window ─────────────────── -->
+    <div id="missionWindow" class="drag-window hidden">
+      <div class="drag-header" data-drag-handle>
+        <strong>Mission Order</strong>
+        <button class="drag-close-btn" data-close-btn type="button">&times;</button>
+      </div>
+      <div id="missionContent" class="drag-content"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

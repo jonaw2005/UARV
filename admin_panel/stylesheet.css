@@ -110,8 +110,8 @@ body {
   transform-origin: center center;
 }
 
-/* ── Telemetry floating window ────────────────────────── */
-.telemetry-window {
+/* ── Draggable floating windows ───────────────────────── */
+.drag-window {
   position: fixed;
   z-index: 9999;
   background: rgba(14, 28, 39, 0.97);
@@ -127,7 +127,7 @@ body {
   user-select: none;
 }
 
-.telemetry-header {
+.drag-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -138,11 +138,11 @@ body {
   cursor: grab;
 }
 
-.telemetry-header:active {
+.drag-header:active {
   cursor: grabbing;
 }
 
-.telemetry-close-btn {
+.drag-close-btn {
   background: none;
   border: none;
   color: #a8b2c7;
@@ -153,15 +153,15 @@ body {
   transition: color 0.12s;
 }
 
-.telemetry-close-btn:hover {
+.drag-close-btn:hover {
   color: #f8fafc;
 }
 
-.telemetry-content {
+.drag-content {
   padding: 12px 20px 20px;
 }
 
-.telemetry-row {
+.drag-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
@@ -169,16 +169,16 @@ body {
   font-size: 0.92rem;
 }
 
-.telemetry-row:last-child {
+.drag-row:last-child {
   border-bottom: none;
 }
 
-.telemetry-row .label {
+.drag-row .label {
   color: #a8b2c7;
   font-weight: 500;
 }
 
-.telemetry-row .value {
+.drag-row .value {
   color: #eef2ff;
   font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
@@ -294,6 +294,11 @@ body {
   color: #1fb4ff;
   font-weight: 600;
   text-decoration: none;
+}
+
+.mission-link {
+  text-decoration: none;
+  color: #ffffff;
 }
 
 .action-btn {

@@ -111,12 +111,76 @@ if (refreshLocationBtn) {
   });
 }
 
-// ── Telemetry floating window (draggable) ───────────────────────────────────
+// ── Generic drag logic for floating windows ─────────────────────────────────
+
+function makeDraggable(windowEl) {
+  if (!windowEl) return;
+  const handle = windowEl.querySelector('[data-drag-handle]');
+  if (!handle) return;
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  function onStart(e) {
+    isDragging = true;
+    const cx = e.clientX ?? e.touches?.[0]?.clientX;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY;
+    const rect = windowEl.getBoundingClientRect();
+    offsetX = cx - rect.left;
+    offsetY = cy - rect.top;
+    windowEl.style.left = rect.left + 'px';
+    windowEl.style.top = rect.top + 'px';
+    windowEl.style.right = 'auto';
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    const cx = e.clientX ?? e.touches?.[0]?.clientX;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY;
+    if (cx == null || cy == null) return;
+    windowEl.style.left = (cx - offsetX) + 'px';
+    windowEl.style.top = (cy - offsetY) + 'px';
+    e.preventDefault();
+  }
+
+  function onEnd() {
+    isDragging = false;
+  }
+
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+}
+
+function showDragWindow(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
+}
+
+function hideDragWindow(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
+
+// Wire close buttons
+document.querySelectorAll('[data-close-btn]').forEach((btn) => {
+  const win = btn.closest('.drag-window');
+  if (!win) return;
+  btn.addEventListener('click', () => win.classList.add('hidden'));
+});
+
+// Make all existing drag windows draggable
+document.querySelectorAll('.drag-window').forEach(makeDraggable);
+
+// ── Telemetry button ────────────────────────────────────────────────────────
 
 const telemetryWindow = document.getElementById('telemetryWindow');
 const telemetryContent = document.getElementById('telemetryContent');
-const telemetryCloseBtn = document.getElementById('telemetryCloseBtn');
-const telemetryDragHandle = document.getElementById('telemetryDragHandle');
 
 function showTelemetryWindow(data) {
   if (!telemetryContent || !telemetryWindow) return;
@@ -128,76 +192,12 @@ function showTelemetryWindow(data) {
     telemetryContent.innerHTML = entries.map(([key, val]) => {
       const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       const value = typeof val === 'number' ? val.toFixed(4) : val;
-      return `<div class="telemetry-row"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+      return `<div class="drag-row"><span class="label">${label}</span><span class="value">${value}</span></div>`;
     }).join('');
   }
 
-  telemetryWindow.classList.remove('hidden');
+  showDragWindow('telemetryWindow');
 }
-
-function hideTelemetryWindow() {
-  if (telemetryWindow) {
-    telemetryWindow.classList.add('hidden');
-  }
-}
-
-// Close via × button
-if (telemetryCloseBtn) {
-  telemetryCloseBtn.addEventListener('click', hideTelemetryWindow);
-}
-
-// ── Drag logic ──────────────────────────────────────────────────────────────
-
-let isDragging = false;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
-
-function onDragStart(e) {
-  if (!telemetryWindow) return;
-  // Only start drag from the header
-  if (!e.target.closest('#telemetryDragHandle')) return;
-
-  isDragging = true;
-  const clientX = e.clientX ?? e.touches?.[0]?.clientX;
-  const clientY = e.clientY ?? e.touches?.[0]?.clientY;
-  const rect = telemetryWindow.getBoundingClientRect();
-  dragOffsetX = clientX - rect.left;
-  dragOffsetY = clientY - rect.top;
-
-  // Reset right/top → use left/top for positioning during drag
-  telemetryWindow.style.left = rect.left + 'px';
-  telemetryWindow.style.top = rect.top + 'px';
-  telemetryWindow.style.right = 'auto';
-
-  e.preventDefault();
-}
-
-function onDragMove(e) {
-  if (!isDragging || !telemetryWindow) return;
-  const clientX = e.clientX ?? e.touches?.[0]?.clientX;
-  const clientY = e.clientY ?? e.touches?.[0]?.clientY;
-  if (clientX == null || clientY == null) return;
-
-  telemetryWindow.style.left = (clientX - dragOffsetX) + 'px';
-  telemetryWindow.style.top = (clientY - dragOffsetY) + 'px';
-  e.preventDefault();
-}
-
-function onDragEnd() {
-  isDragging = false;
-}
-
-// Mouse events
-document.addEventListener('mousedown', onDragStart);
-document.addEventListener('mousemove', onDragMove);
-document.addEventListener('mouseup', onDragEnd);
-
-// Touch events (mobile)
-document.addEventListener('touchstart', onDragStart, { passive: false });
-document.addEventListener('touchmove', onDragMove, { passive: false });
-document.addEventListener('touchend', onDragEnd);
-
-// ── Telemetry button ────────────────────────────────────────────────────────
 
 const telemetryBtn = document.getElementById('telemetryBtn');
 if (telemetryBtn) {
@@ -213,12 +213,54 @@ if (telemetryBtn) {
       if (telemetryContent) {
         telemetryContent.innerHTML = '<p style="color: #e06c75; text-align: center;">Failed to fetch telemetry data.</p>';
       }
-      if (telemetryWindow) {
-        telemetryWindow.classList.remove('hidden');
-      }
+      showDragWindow('telemetryWindow');
     }
   });
 }
 
+// ── Mission Order button ────────────────────────────────────────────────────
 
+const missionWindow = document.getElementById('missionWindow');
+const missionContent = document.getElementById('missionContent');
 
+function showMissionWindow(missionData) {
+  if (!missionContent || !missionWindow) return;
+
+  const items = missionData?.mission;
+  if (!items || items.length === 0) {
+    missionContent.innerHTML = '<p style="color: #a8b2c7; text-align: center; padding: 12px 0;">Use the Mission Planner to create and upload a mission.</p>';
+  } else {
+    missionContent.innerHTML = items.map((item, idx) => {
+      const type = item.type || 'unknown';
+      const details = item.action || item.lat || '';
+      const lat = item.lat ? item.lat.toFixed(6) : '';
+      const lon = item.lon ? item.lon.toFixed(6) : '';
+      const alt = item.alt || item.param || '';
+      let info = type;
+      if (lat && lon) info += ` · ${lat}, ${lon}`;
+      if (alt) info += ` · ${alt}m`;
+      return `<div class="drag-row"><span class="label">#${idx + 1}</span><span class="value">${info}</span></div>`;
+    }).join('');
+  }
+
+  showDragWindow('missionWindow');
+}
+
+const downloadMissionBtn = document.getElementById('downloadMissionBtn');
+if (downloadMissionBtn) {
+  downloadMissionBtn.addEventListener('click', async () => {
+    const url = 'http://192.168.0.105/api/mission_download';
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      showMissionWindow(data);
+    } catch (err) {
+      console.error('Mission download failed:', err);
+      if (missionContent) {
+        missionContent.innerHTML = '<p style="color: #e06c75; text-align: center;">Failed to download mission.</p>';
+      }
+      showDragWindow('missionWindow');
+    }
+  });
+}
