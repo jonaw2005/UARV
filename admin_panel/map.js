@@ -7,7 +7,7 @@ let lat = null;
 let lon = null;
 
 async function get_Location() {
-  const url = 'http://192.168.0.105/api/get_location';
+  const url = 'http://192.168.0.105/api/get_telemetry';
 
   try {
     const response = await fetch(url, { cache: 'no-store' });
