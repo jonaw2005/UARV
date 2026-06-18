@@ -728,8 +728,7 @@ class MAVBridge:
 
             ack = self.master.recv_match(
                 type="MISSION_ACK",
-                blocking=True,
-                timeout=10
+                blocking=True
             )
 
             if not ack:
