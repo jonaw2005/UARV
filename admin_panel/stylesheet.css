@@ -110,37 +110,36 @@ body {
   transform-origin: center center;
 }
 
-/* ── Telemetry overlay ─────────────────────────────────── */
-.telemetry-overlay {
+/* ── Telemetry floating window ────────────────────────── */
+.telemetry-window {
   position: fixed;
-  inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-
-.telemetry-panel {
   background: rgba(14, 28, 39, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
-  max-width: 480px;
-  width: 90%;
-  max-height: 80vh;
+  width: 380px;
+  max-height: 70vh;
   overflow-y: auto;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  top: 80px;
+  right: 24px;
+  user-select: none;
 }
 
 .telemetry-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 1rem;
   color: #f8fafc;
+  cursor: grab;
+}
+
+.telemetry-header:active {
+  cursor: grabbing;
 }
 
 .telemetry-close-btn {

@@ -111,14 +111,15 @@ if (refreshLocationBtn) {
   });
 }
 
-// ── Telemetry overlay ───────────────────────────────────────────────────────
+// ── Telemetry floating window (draggable) ───────────────────────────────────
 
-const telemetryOverlay = document.getElementById('telemetryOverlay');
+const telemetryWindow = document.getElementById('telemetryWindow');
 const telemetryContent = document.getElementById('telemetryContent');
 const telemetryCloseBtn = document.getElementById('telemetryCloseBtn');
+const telemetryDragHandle = document.getElementById('telemetryDragHandle');
 
-function showTelemetryOverlay(data) {
-  if (!telemetryContent || !telemetryOverlay) return;
+function showTelemetryWindow(data) {
+  if (!telemetryContent || !telemetryWindow) return;
 
   const entries = Object.entries(data).filter(([, v]) => v !== null && v !== undefined);
   if (entries.length === 0) {
@@ -131,28 +132,72 @@ function showTelemetryOverlay(data) {
     }).join('');
   }
 
-  telemetryOverlay.classList.remove('hidden');
+  telemetryWindow.classList.remove('hidden');
 }
 
-function hideTelemetryOverlay() {
-  if (telemetryOverlay) {
-    telemetryOverlay.classList.add('hidden');
+function hideTelemetryWindow() {
+  if (telemetryWindow) {
+    telemetryWindow.classList.add('hidden');
   }
 }
 
-// Close overlay when clicking the close button
+// Close via × button
 if (telemetryCloseBtn) {
-  telemetryCloseBtn.addEventListener('click', hideTelemetryOverlay);
+  telemetryCloseBtn.addEventListener('click', hideTelemetryWindow);
 }
 
-// Close overlay when clicking the semi-transparent background
-if (telemetryOverlay) {
-  telemetryOverlay.addEventListener('click', (e) => {
-    if (e.target === telemetryOverlay) {
-      hideTelemetryOverlay();
-    }
-  });
+// ── Drag logic ──────────────────────────────────────────────────────────────
+
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function onDragStart(e) {
+  if (!telemetryWindow) return;
+  // Only start drag from the header
+  if (!e.target.closest('#telemetryDragHandle')) return;
+
+  isDragging = true;
+  const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+  const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+  const rect = telemetryWindow.getBoundingClientRect();
+  dragOffsetX = clientX - rect.left;
+  dragOffsetY = clientY - rect.top;
+
+  // Reset right/top → use left/top for positioning during drag
+  telemetryWindow.style.left = rect.left + 'px';
+  telemetryWindow.style.top = rect.top + 'px';
+  telemetryWindow.style.right = 'auto';
+
+  e.preventDefault();
 }
+
+function onDragMove(e) {
+  if (!isDragging || !telemetryWindow) return;
+  const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+  const clientY = e.clientY ?? e.touches?.[0]?.clientY;
+  if (clientX == null || clientY == null) return;
+
+  telemetryWindow.style.left = (clientX - dragOffsetX) + 'px';
+  telemetryWindow.style.top = (clientY - dragOffsetY) + 'px';
+  e.preventDefault();
+}
+
+function onDragEnd() {
+  isDragging = false;
+}
+
+// Mouse events
+document.addEventListener('mousedown', onDragStart);
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('mouseup', onDragEnd);
+
+// Touch events (mobile)
+document.addEventListener('touchstart', onDragStart, { passive: false });
+document.addEventListener('touchmove', onDragMove, { passive: false });
+document.addEventListener('touchend', onDragEnd);
+
+// ── Telemetry button ────────────────────────────────────────────────────────
 
 const telemetryBtn = document.getElementById('telemetryBtn');
 if (telemetryBtn) {
@@ -162,14 +207,14 @@ if (telemetryBtn) {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      showTelemetryOverlay(data);
+      showTelemetryWindow(data);
     } catch (err) {
       console.error('Telemetry fetch failed:', err);
       if (telemetryContent) {
         telemetryContent.innerHTML = '<p style="color: #e06c75; text-align: center;">Failed to fetch telemetry data.</p>';
       }
-      if (telemetryOverlay) {
-        telemetryOverlay.classList.remove('hidden');
+      if (telemetryWindow) {
+        telemetryWindow.classList.remove('hidden');
       }
     }
   });
