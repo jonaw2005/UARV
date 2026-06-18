@@ -58,12 +58,59 @@ class MAVBridge:
         pass
 
 
-    def arm(self):
-        self.master.arduplane_arm()
+    def _send_arm_command(self, arm: bool, force: bool = False):
+        """
+        Internal helper to send arm/disarm command.
+        """
 
+        self.master.mav.command_long_send(
+            self.target_system,
+            self.target_component,
+            mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,  # confirmation
+            1 if arm else 0,  # param1: 1=arm, 0=disarm
+            21196 if force else 0,  # param2: force flag
+            0, 0, 0, 0, 0
+        )
 
-    def disarm(self):
-        self.master.arduplane_disarm()
+    def arm(self, force: bool = False, timeout: float = 5.0) -> bool:
+        """
+        Arms the vehicle and waits for confirmation.
+
+        Returns True if armed successfully.
+        """
+
+        self._send_arm_command(True, force=force)
+
+        start = time.time()
+        while time.time() - start < timeout:
+            msg = self.master.recv_match(type='COMMAND_ACK', blocking=True, timeout=1)
+
+            if msg and msg.command == mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM:
+                if msg.result == mu.mavlink.MAV_RESULT_ACCEPTED:
+                    # optional: wait until motors actually armed
+                    return True
+
+        return False
+
+    def disarm(self, force: bool = False, timeout: float = 5.0) -> bool:
+        """
+        Disarms the vehicle and waits for confirmation.
+
+        Returns True if disarmed successfully.
+        """
+
+        self._send_arm_command(False, force=force)
+
+        start = time.time()
+        while time.time() - start < timeout:
+            msg = self.master.recv_match(type='COMMAND_ACK', blocking=True, timeout=1)
+
+            if msg and msg.command == mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM:
+                if msg.result == mu.mavlink.MAV_RESULT_ACCEPTED:
+                    return True
+
+        return False
 
 
     def is_armed(self, timeout=3):
