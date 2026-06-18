@@ -257,6 +257,17 @@ def get_telemetry():
         future = run_task(bridge.get_telemetry)
         telemetry = future.result(timeout=10)
 
+        # If lat or lon are 0/None, fall back to GPS_RAW_INT values (keep other fields)
+        lat = telemetry.get('lat')
+        lon = telemetry.get('lon')
+        if lat == 0 or lon == 0 or lat is None or lon is None:
+            future_raw = run_task(bridge.get_gps_raw)
+            gps_raw = future_raw.result(timeout=10)
+            if gps_raw.get('lat') not in (0, None):
+                telemetry['lat'] = gps_raw['lat']
+            if gps_raw.get('lon') not in (0, None):
+                telemetry['lon'] = gps_raw['lon']
+
         # update lightweight cached state (location only)
         with state_lock:
             if telemetry.get('lat') is not None:
