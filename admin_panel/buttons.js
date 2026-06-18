@@ -123,6 +123,13 @@ function buildModeDropdown(modeButton) {
 
 let armPollInterval = null;
 
+async function _fetchArmStatus() {
+  const res = await fetch(`${API_BASE}/is_armed`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  return text.trim();
+}
+
 function startArmStatusPoll() {
   const armBtn = document.getElementById('armDisarmBtn');
   if (!armBtn) return;
@@ -130,14 +137,14 @@ function startArmStatusPoll() {
 
   async function poll() {
     try {
-      const data = await apiGet('/is_armed');
-      if (data === null || data === undefined) {
+      const text = await _fetchArmStatus();
+      if (text === 'True' || text === 'true') {
+        statusSpan.textContent = 'Status: ✅ ARMED';
+      } else if (text === 'False' || text === 'false') {
+        statusSpan.textContent = 'Status: ⛔ DISARMED';
+      } else {
         statusSpan.textContent = 'Status: Error';
-        return;
       }
-      // data could be { armed: true/false } or a bare boolean
-      const armed = typeof data === 'object' ? data.armed : !!data;
-      statusSpan.textContent = armed ? 'Status: ✅ ARMED' : 'Status: ⛔ DISARMED';
     } catch {
       statusSpan.textContent = 'Status: Unreachable';
     }
