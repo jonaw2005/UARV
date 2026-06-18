@@ -162,13 +162,21 @@ def run_task(fn, *args, **kwargs):
 @app.route('/arm', methods=['GET'])
 def arm():
     future = run_task(bridge.arm)
-    return jsonify({'status': 'arming requested', 'task_id': id(future)})
+    success = future.result(timeout=10)
+    if success:
+        return jsonify({'status': 'arm successful'})
+    else:
+        return jsonify({'status': 'arm failed'}), 500
 
 
 @app.route('/disarm', methods=['GET'])
 def disarm():
     future = run_task(bridge.disarm)
-    return jsonify({'status': 'disarming requested', 'task_id': id(future)})
+    success = future.result(timeout=10)
+    if success:
+        return jsonify({'status': 'disarm successful'})
+    else:
+        return jsonify({'status': 'disarm failed'}), 500
 
 
 @app.route('/change_mode', methods=['POST'])
