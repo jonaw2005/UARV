@@ -228,18 +228,51 @@ function showMissionWindow(missionData) {
 
   const items = missionData?.mission;
   if (!items || items.length === 0) {
-    missionContent.innerHTML = '<p style="color: #a8b2c7; text-align: center; padding: 12px 0;">Use the Mission Planner to create and upload a mission.</p>';
+    missionContent.innerHTML = '<div class="mission-empty">📋 Use the Mission Planner to create and upload a mission.</div>';
   } else {
     missionContent.innerHTML = items.map((item, idx) => {
       const type = item.type || 'unknown';
-      const details = item.action || item.lat || '';
-      const lat = item.lat ? item.lat.toFixed(6) : '';
-      const lon = item.lon ? item.lon.toFixed(6) : '';
-      const alt = item.alt || item.param || '';
-      let info = type;
-      if (lat && lon) info += ` · ${lat}, ${lon}`;
-      if (alt) info += ` · ${alt}m`;
-      return `<div class="drag-row"><span class="label">#${idx + 1}</span><span class="value">${info}</span></div>`;
+      const action = item.action || '';
+      const lat = item.lat != null ? item.lat.toFixed(6) : null;
+      const lon = item.lon != null ? item.lon.toFixed(6) : null;
+      const alt = item.alt ?? item.param ?? null;
+
+      // Icon and badge color based on type
+      let icon = '📍';
+      let badgeClass = 'badge-waypoint';
+      if (type === 'action') {
+        switch (action) {
+          case 'takeoff':       icon = '🛫'; badgeClass = 'badge-takeoff'; break;
+          case 'land':          icon = '🛬'; badgeClass = 'badge-land'; break;
+          case 'rtl':           icon = '🏠'; badgeClass = 'badge-rtl'; break;
+          case 'loiter':        icon = '🔄'; badgeClass = 'badge-loiter'; break;
+          case 'set_speed':     icon = '🚀'; badgeClass = 'badge-speed'; break;
+          case 'change_alt':    icon = '↕️'; badgeClass = 'badge-alt'; break;
+          case 'delay':         icon = '⏱️'; badgeClass = 'badge-delay'; break;
+          case 'condition_yaw': icon = '🧭'; badgeClass = 'badge-yaw'; break;
+          case 'land_start':    icon = '🛬'; badgeClass = 'badge-land'; break;
+          default:              icon = '⚡'; badgeClass = 'badge-action'; break;
+        }
+      }
+
+      const displayName = action ? action.replace(/_/g, ' ') : type;
+
+      // Location line
+      let locationStr = '';
+      if (lat && lon) locationStr = `<span class="mission-coords">${lat}, ${lon}</span>`;
+      if (alt != null) {
+        const altVal = typeof alt === 'number' ? alt.toFixed(1) : alt;
+        locationStr += locationStr ? ` · ${altVal}m` : `<span class="mission-alt">${altVal}m</span>`;
+      }
+
+      return `
+        <div class="mission-item">
+          <div class="mission-item-header">
+            <span class="mission-step">${icon}<span class="step-num">${idx + 1}</span></span>
+            <span class="mission-type ${badgeClass}">${displayName}</span>
+          </div>
+          ${locationStr ? `<div class="mission-location">${locationStr}</div>` : ''}
+        </div>`;
     }).join('');
   }
 

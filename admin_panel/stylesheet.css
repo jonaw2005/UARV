@@ -123,8 +123,17 @@ body {
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
   cursor: default;
   top: 80px;
-  right: 24px;
   user-select: none;
+}
+
+#telemetryWindow {
+  left: 24px;
+  right: auto;
+}
+
+#missionWindow {
+  right: 24px;
+  left: auto;
 }
 
 .drag-header {
@@ -181,6 +190,86 @@ body {
 .drag-row .value {
   color: #eef2ff;
   font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* ── Mission Order window items ───────────────────────── */
+.mission-empty {
+  color: #a8b2c7;
+  text-align: center;
+  padding: 20px 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.mission-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.mission-item:last-child {
+  margin-bottom: 0;
+}
+
+.mission-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mission-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1.1rem;
+}
+
+.step-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1px 7px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.mission-type {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+  text-transform: capitalize;
+}
+
+.badge-waypoint { background: rgba(31, 180, 255, 0.2); color: #64c8ff; }
+.badge-takeoff  { background: rgba(72, 199, 142, 0.2); color: #6edb9e; }
+.badge-land     { background: rgba(255, 159, 67, 0.2); color: #ffb347; }
+.badge-rtl      { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+.badge-loiter   { background: rgba(166, 120, 255, 0.2); color: #b488ff; }
+.badge-speed    { background: rgba(255, 206, 84, 0.2); color: #ffce54; }
+.badge-alt      { background: rgba(72, 182, 219, 0.2); color: #60c8e8; }
+.badge-delay    { background: rgba(173, 181, 189, 0.2); color: #c8ced6; }
+.badge-yaw      { background: rgba(92, 219, 211, 0.2); color: #7ce8e0; }
+.badge-action   { background: rgba(255, 255, 255, 0.08); color: #eef2ff; }
+
+.mission-location {
+  margin-top: 6px;
+  padding-left: 32px;
+  font-size: 0.82rem;
+  color: #8892a7;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+.mission-coords {
+  color: #a8b2c7;
+}
+
+.mission-alt {
+  color: #7ec8a3;
 }
 
 .panel-overlay {
