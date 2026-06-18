@@ -21,15 +21,6 @@ function hideCameraError() {
   cameraOverlay.classList.add('hidden');
 }
 
-function switch_NV_mode() {
-  console.log('Switch NV Mode triggered');
-  const API_BASE = 'http://192.168.0.105:8000';
-  fetch(`${API_BASE}/switch_nv_mode`, { method: 'POST' })
-    .then(res => res.json())
-    .then(data => console.log('NV mode response:', data))
-    .catch(err => console.error('NV mode request failed:', err));
-}
-
 function initCameraStream() {
   cameraUrl.textContent = SOCKET_SERVER;
   if (!cameraVideo) {
@@ -82,9 +73,4 @@ function initCameraStream() {
 
 window.addEventListener('DOMContentLoaded', () => {
   initCameraStream();
-
-  const nvBtn = document.getElementById('nvModeBtn');
-  if (nvBtn) {
-    nvBtn.addEventListener('click', switch_NV_mode);
-  }
 });
