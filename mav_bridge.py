@@ -680,6 +680,7 @@ class MAVBridge:
             time.sleep(0.3)
 
             count = len(mission_items)
+            self.logger.info(f"Starting mission upload: {count} items")
             uploaded = 0
 
             self.master.mav.mission_count_send(
