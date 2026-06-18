@@ -66,6 +66,16 @@ class MAVBridge:
         self.master.arduplane_disarm()
 
 
+    def is_armed(self, timeout=3):
+        """Return True if the vehicle is armed, False if disarmed."""
+        with self._master_lock:
+            msg = self.master.recv_match(type='HEARTBEAT', blocking=True, timeout=timeout)
+            if not msg:
+                return False
+
+            return bool(msg.base_mode & mu.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+
+
     def goto(self, lat, lon, alt):
             """
             Send a GPS waypoint (global position target).

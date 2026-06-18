@@ -27,11 +27,21 @@ async function apiGet(endpoint) {
   }
 }
 
+async function apiGetText(endpoint) {
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error(`API GET ${endpoint} failed:`, err);
+  }
+}
+
 // ── Command functions (exported for use by HTML) ────────────────────────────
 
 function arm_disarm() {
   console.log('Arm / Disarm triggered');
-  apiPost('/arm');
+  apiGet('/arm_disarm');
 }
 
 function change_Mode(mode) {
@@ -39,9 +49,9 @@ function change_Mode(mode) {
   apiPost('/change_flightmode', { mode });
 }
 
-function mission_start() {
-  console.log('Mission start triggered');
-  apiGet('/mission_start');
+function takeoff() {
+  console.log('Takeoff triggered');
+  apiGet('/takeoff');
 }
 
 function abort_mission() {
@@ -51,7 +61,7 @@ function abort_mission() {
 
 // ── Mode dropdown UI ────────────────────────────────────────────────────────
 
-const MODES = ['MANUAL', 'FBWA', 'AUTO', 'GUIDED', 'RTL'];
+const MODES = ['MANUAL', 'FBWA', 'AUTO', 'GUIDED', 'RTL', 'LOITER', 'STABILIZE', 'AUTOLAND', 'LAND'];
 
 function buildModeDropdown(modeButton) {
   const wrapper = document.createElement('div');
@@ -140,8 +150,8 @@ function setupActionButtons() {
 
   // Mission Start
   buttons[2].disabled = false;
-  buttons[2].id = 'missionStartBtn';
-  buttons[2].addEventListener('click', mission_start);
+  buttons[2].id = 'takeoffBtn';
+  buttons[2].addEventListener('click', takeoff);
 
   // ABORT
   buttons[3].disabled = false;
