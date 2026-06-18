@@ -286,6 +286,15 @@ def get_gps_raw():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/gps_status', methods=['GET'])
+def gps_status():
+    try:
+        future = run_task(bridge.get_gps_status)
+        status = future.result(timeout=10)
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/get_health', methods=['GET'])
 def get_health():

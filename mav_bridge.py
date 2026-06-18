@@ -346,7 +346,7 @@ class MAVBridge:
             'lat': None,
             'lon': None,
             'altitude': None,
-            'relative_altitude': None,
+            #'relative_altitude': None,
             'groundspeed': None,
             'heading': None,
         }
@@ -363,7 +363,7 @@ class MAVBridge:
                 gps_raw['lat'] = msg.lat / 1e7
                 gps_raw['lon'] = msg.lon / 1e7
                 gps_raw['altitude'] = msg.alt / 1000.0
-                gps_raw['relative_altitude'] = msg.relative_alt / 1000.0
+                #gps_raw['relative_altitude'] = msg.relative_alt / 1000.0
                 if hasattr(msg, 'hdg') and msg.hdg != 65535:
                     gps_raw['heading'] = msg.hdg / 100.0
                 if hasattr(msg, 'velocity'):
