@@ -831,7 +831,7 @@ class MAVBridge:
                 raise TimeoutError(f"No mission item for seq {seq}")
 
         self.logger.info(f"[download_mission_test] Downloaded {len(mission_items)}/{count} items")
-        return {"count": count, "mission": mission_items}
+        return mission_items
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
     # --------------------------------------------------
