@@ -737,9 +737,9 @@ class MAVBridge:
                 item.get("param2", 0),
                 item.get("param3", 0),
                 item.get("param4", 0),
-                item.get("lat", 0),
-                item.get("lon", 0),
-                item.get("alt", 0),
+                item.get("x", 0),
+                item.get("y", 0),
+                item.get("z", 0),
             )
 
             self._write(mission_item_msg, log=True)
