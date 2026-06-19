@@ -517,7 +517,7 @@ def download_mission():
 def download_mission_raw():
     try:
         future = run_task(bridge.download_mission_test)
-        raw = future.result(timeout=30)
+        raw = future.result(timeout=35)
         return jsonify({
             "mission": raw
         }), 200
