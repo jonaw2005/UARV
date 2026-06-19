@@ -679,7 +679,7 @@ class MAVBridge:
 
         self._write(clear_msg, log=True)
 
-        ack = self._read_message("MISSION_ACK")
+        ack = self._read("MISSION_ACK")
 
         if not ack or ack.type != mu.mavlink.MAV_RESULT_ACCEPTED:
             self.logger.error(f"Failed to clear mission: {ack.type if ack else 'No ACK'}")
