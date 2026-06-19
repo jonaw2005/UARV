@@ -12,7 +12,7 @@ import time
 import logging
 
 class MAVBridge:
-    def __init__(self, connection_string, baud=115200, source_system=255, target_system=1, target_component=1):
+    def __init__(self, connection_string, baud=9600, source_system=255, target_system=1, target_component=1):
         """Create bridge.
 
         connection_string: e.g. 'udp:127.0.0.1:14550' or 'COM3' or '/dev/ttyUSB0'
