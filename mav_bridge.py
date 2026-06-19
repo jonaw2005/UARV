@@ -48,6 +48,7 @@ class MAVBridge:
         self._latest, releases lock, and returns the message.
         """
         with self._master_lock:
+            self.logger.debug(f"trying to find message {msg_type}")
             msg = self.master.recv_match(blocking=True, timeout=timeout)
             self._latest.value = msg
             if msg and msg.get_type() in msg_type:
