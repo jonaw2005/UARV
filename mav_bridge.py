@@ -37,7 +37,6 @@ class MAVBridge:
         self._health_thread = None
 
         self.logger = logging.getLogger("MAVBridge")
-        logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
     
 
     def connect(self, timeout=30):
@@ -148,7 +147,7 @@ class MAVBridge:
 
     def get_all_params(self):
             
-        print("Requesting parameter list...")
+        self.logger.info("Requesting parameter list...")
 
         self.master.mav.param_request_list_send(
             self.master.target_system,
@@ -178,7 +177,7 @@ class MAVBridge:
                 # Retry parameter request if no response for 3 seconds
                 if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
                     if len(params) == 0:  # No parameters received yet, retry
-                        print("No parameters received, retrying request...")
+                        self.logger.info("No parameters received, retrying request...")
                         self.master.mav.param_request_list_send(
                             self.master.target_system,
                             self.master.target_component
@@ -192,7 +191,7 @@ class MAVBridge:
                 if len(params) > 0 and time.time() - last_param_time > 5:
                     break
 
-        print("Fertig:", len(params), "Parameter")
+        self.logger.info(f"Fertig: {len(params)} Parameter")
         return params
 
 
@@ -1062,9 +1061,9 @@ class MAVBridge:
 if __name__ == "__main__":
     bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     bridge.connect()
-    print("Connected, requesting parameters...")
+    bridge.logger.info("Connected, requesting parameters...")
     #params = bridge.get_all_params()
-    #print("Got parameters:", params)
-    print("Requesting single parameter...")
+    #bridge.logger.info(f"Got parameters: {params}")
+    bridge.logger.info("Requesting single parameter...")
     param_value = bridge.get_param("GPS_RAW_DATA")
-    print("Got parameter:", param_value)
+    bridge.logger.info(f"Got parameter: {param_value}")
