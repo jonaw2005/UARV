@@ -968,10 +968,13 @@ class MAVBridge:
         Directly reads from MAVLink stream (NO cache, NO _get, NO shared state).
         Must be the only recv_match consumer while running.
         """
+        self.logger.info(f"[download_mission] START target_system={self.target_system} target_component={self.target_component} timeout={timeout}s")
+
         with self._master_lock:
             mission = {}
 
             start = time.time()
+            self.logger.debug("[download_mission] Lock acquired, requesting mission list...")
 
             # -------------------------------------------------
             # 1. Request mission list
@@ -981,26 +984,48 @@ class MAVBridge:
                 self.target_component,
                 mu.mavlink.MAV_MISSION_TYPE_MISSION
             )
+            self.logger.debug("[download_mission] Sent MISSION_REQUEST_LIST")
 
             # -------------------------------------------------
             # 2. Wait for MISSION_COUNT
             # -------------------------------------------------
             count = None
+            count_attempts = 0
 
             while time.time() - start < timeout:
+                count_attempts += 1
+                self.logger.debug(f"[download_mission] Waiting for MISSION_COUNT (attempt {count_attempts})...")
                 msg = self._read(msg_type="MISSION_COUNT", timeout=1)
 
                 if msg:
                     count = msg.count
+                    self.logger.info(f"[download_mission] Received MISSION_COUNT: {count} items (after {count_attempts} attempts, {time.time() - start:.2f}s elapsed)")
                     break
 
+                self.logger.debug(f"[download_mission] No MISSION_COUNT yet, elapsed={time.time() - start:.2f}s")
+
             if count is None:
-                raise TimeoutError("No MISSION_COUNT received")
+                elapsed = time.time() - start
+                self.logger.error(f"[download_mission] FAILED: No MISSION_COUNT received after {elapsed:.2f}s and {count_attempts} attempts")
+                raise TimeoutError(f"No MISSION_COUNT received after {elapsed:.2f}s")
+
+            # Empty mission is valid
+            if count == 0:
+                self.logger.info("[download_mission] Empty mission (count=0), returning immediately")
+                return {
+                    "count": 0,
+                    "mission": {},
+                    "ack": None
+                }
+
+            self.logger.info(f"[download_mission] Starting item download: {count} items to fetch")
 
             # -------------------------------------------------
             # 3. Request + receive each mission item
             # -------------------------------------------------
             for seq in range(count):
+                item_start = time.time()
+                self.logger.debug(f"[download_mission] === Item {seq}/{count} ===")
 
                 # request item
                 self.master.mav.mission_request_int_send(
@@ -1009,32 +1034,64 @@ class MAVBridge:
                     seq,
                     mu.mavlink.MAV_MISSION_TYPE_MISSION
                 )
+                self.logger.debug(f"[download_mission] Sent MISSION_REQUEST_INT for seq={seq}")
 
                 item = None
                 t0 = time.time()
+                read_attempts = 0
 
                 while time.time() - t0 < timeout:
+                    read_attempts += 1
+                    self.logger.debug(f"[download_mission] Waiting for MISSION_ITEM_INT seq={seq} (read attempt {read_attempts}, elapsed={time.time() - t0:.2f}s)")
                     msg = self._read(msg_type="MISSION_ITEM_INT", timeout=1)
+
+                    if msg:
+                        self.logger.debug(f"[download_mission] Received message: type={msg.get_type()}, seq={getattr(msg, 'seq', '?')}, cmd={getattr(msg, 'command', '?')}")
 
                     if msg and msg.seq == seq:
                         item = msg
+                        item_elapsed = time.time() - item_start
+                        self.logger.info(f"[download_mission] Got MISSION_ITEM_INT for seq={seq} after {read_attempts} reads, {item_elapsed:.2f}s total")
                         break
 
-                if item is None:
-                    raise TimeoutError(f"Missing mission item seq={seq}")
+                    if msg and msg.seq != seq:
+                        self.logger.warning(f"[download_mission] Got MISSION_ITEM_INT but wrong seq: expected {seq}, got {msg.seq}")
 
-                mission[seq] = self._parse_mission_item(item, seq=seq)
+                if item is None:
+                    elapsed = time.time() - t0
+                    total_elapsed = time.time() - start
+                    self.logger.error(f"[download_mission] FAILED: Missing mission item seq={seq} after {read_attempts} reads, {elapsed:.2f}s waiting, {total_elapsed:.2f}s total")
+                    raise TimeoutError(f"Missing mission item seq={seq} after {elapsed:.2f}s")
+
+                parsed = self._parse_mission_item(item, seq=seq)
+                self.logger.debug(f"[download_mission] Parsed seq={seq}: type={parsed.get('type')}, action={parsed.get('action', 'N/A')}, lat={parsed.get('lat', 'N/A')}, lon={parsed.get('lon', 'N/A')}")
+                mission[seq] = parsed
+
+            total_download_time = time.time() - start
+            self.logger.info(f"[download_mission] All {count} items downloaded in {total_download_time:.2f}s")
 
             # -------------------------------------------------
             # 4. Wait for ACK
             # -------------------------------------------------
+            self.logger.debug("[download_mission] Waiting for MISSION_ACK...")
             ack = self._read(msg_type="MISSION_ACK", timeout=timeout)
 
-            return {
+            if ack:
+                ack_type = getattr(ack, "type", None)
+                ack_result = getattr(ack, "result", None)
+                self.logger.info(f"[download_mission] Received MISSION_ACK: type={ack_type}, result={ack_result}")
+            else:
+                self.logger.warning("[download_mission] No MISSION_ACK received (timeout)")
+
+            result = {
                 "count": count,
                 "mission": mission,
                 "ack": getattr(ack, "type", None) if ack else None
             }
+
+            total_time = time.time() - start
+            self.logger.info(f"[download_mission] COMPLETE: {count} items in {total_time:.2f}s, ack={result['ack']}")
+            return result
 
 
     # --------------------------------------------------
