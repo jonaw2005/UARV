@@ -1064,27 +1064,27 @@ class MAVBridge:
     def get_mode(self):
         self.logger.debug(f"get_mode")
 
-        request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
-            self.master.target_system,
-            self.master.target_component,
-            mu.mavlink.MAV_DATA_STREAM_ALL,
-            1,
-            1,
-        )
+        # Read a fresh HEARTBEAT to get the current mode
+        msg = self._read(msg_type='HEARTBEAT', timeout=5)
+        if not msg:
+            raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
 
-        self._write(request_data_stream_message)
-
-        while True:
-            msg = self._read(msg_type='HEARTBEAT', timeout=5)
-            if msg:
-                mode_id = msg.custom_mode
-                mode_mapping = self.master.mode_mapping()
-                for mode_name, mid in mode_mapping.items():
-                    if mid == mode_id:
-                        return mode_name
-                return f"UNKNOWN({mode_id})"
-            else:
-                raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
+        # Use pymavlink's built-in flightmode decoder which handles
+        # ArduPilot and PX4 firmware-specific mode encoding correctly
+        try:
+            mode = self.master.flightmode
+            self.logger.debug(f"Flight mode: {mode}")
+            return mode
+        except Exception as e:
+            # Fallback: manual lookup using custom_mode
+            mode_id = msg.custom_mode
+            mode_mapping = self.master.mode_mapping()
+            for mode_name, mid in mode_mapping.items():
+                if mid == mode_id:
+                    self.logger.debug(f"Flight mode (manual): {mode_name}")
+                    return mode_name
+            self.logger.debug(f"Unknown flight mode: {mode_id}")
+            return f"UNKNOWN({mode_id})"
 
     def start_rc_override(self):
         self.logger.debug(f"start_rc_override")
