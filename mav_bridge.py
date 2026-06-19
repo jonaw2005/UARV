@@ -882,7 +882,7 @@ class MAVBridge:
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (parsed / translated)
     # --------------------------------------------------
-    def download_mission(self):
+    def download_mission_2(self):
         """
         Holt komplette Mission vom Pixhawk (ArduPlane)
         und gibt sie als strukturierte Liste zurück
@@ -986,6 +986,104 @@ class MAVBridge:
                     continue
 
             return mission
+
+    def download_mission(self, timeout: float = 10.0):
+        """
+        Fully self-contained mission download.
+        Directly reads from MAVLink stream (NO cache, NO _get, NO shared state).
+        Must be the only recv_match consumer while running.
+        """
+
+        mission = {}
+
+        start = time.time()
+
+        # -------------------------------------------------
+        # 1. Request mission list
+        # -------------------------------------------------
+        self.master.mav.mission_request_list_send(
+            self.target_system,
+            self.target_component,
+            mu.mavlink.MAV_MISSION_TYPE_MISSION
+        )
+
+        # -------------------------------------------------
+        # 2. Wait for MISSION_COUNT
+        # -------------------------------------------------
+        count = None
+
+        while time.time() - start < timeout:
+            msg = self.master.recv_match(
+                type="MISSION_COUNT",
+                blocking=True,
+                timeout=1
+            )
+
+            if msg:
+                count = msg.count
+                break
+
+        if count is None:
+            raise TimeoutError("No MISSION_COUNT received")
+
+        # -------------------------------------------------
+        # 3. Request + receive each mission item
+        # -------------------------------------------------
+        for seq in range(count):
+
+            # request item
+            self.master.mav.mission_request_int_send(
+                self.target_system,
+                self.target_component,
+                seq,
+                mu.mavlink.MAV_MISSION_TYPE_MISSION
+            )
+
+            item = None
+            t0 = time.time()
+
+            while time.time() - t0 < timeout:
+                msg = self.master.recv_match(
+                    type="MISSION_ITEM_INT",
+                    blocking=True,
+                    timeout=1
+                )
+
+                if msg and msg.seq == seq:
+                    item = msg
+                    break
+
+            if item is None:
+                raise TimeoutError(f"Missing mission item seq={seq}")
+
+            mission[seq] = {
+                "frame": item.frame,
+                "command": item.command,
+                "param1": item.param1,
+                "param2": item.param2,
+                "param3": item.param3,
+                "param4": item.param4,
+                "x": item.x,
+                "y": item.y,
+                "z": item.z,
+                "autocontinue": item.autocontinue,
+            }
+
+        # -------------------------------------------------
+        # 4. Wait for ACK
+        # -------------------------------------------------
+        ack = self.master.recv_match(
+            type="MISSION_ACK",
+            blocking=True,
+            timeout=timeout
+        )
+
+        return {
+            "count": count,
+            "mission": mission,
+            "ack": getattr(ack, "type", None) if ack else None
+        }
+
 
     # --------------------------------------------------
     # INTERNAL: MAVLink → JSON
