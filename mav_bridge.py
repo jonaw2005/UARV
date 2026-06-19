@@ -1003,8 +1003,8 @@ class MAVBridge:
             # -------------------------------------------------
             self.master.mav.mission_request_list_send(
                 self.target_system,
-                self.target_component,
-                mu.mavlink.MAV_MISSION_TYPE_MISSION
+                self.target_component#,
+                #mu.mavlink.MAV_MISSION_TYPE_MISSION
             )
 
             # -------------------------------------------------
