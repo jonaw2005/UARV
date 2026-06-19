@@ -766,7 +766,12 @@ class MAVBridge:
         )
         mission = self._read(msg_type="MISSION_COUNT", timeout=15)
         self.logger.info(f"Mission request list sent, got: {mission}")
-        return mission
+        
+        if mission:
+            return mission.to_dict()
+        else:
+            raise TimeoutError("No mission data received")
+            return "No mission data received"
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
     # --------------------------------------------------
