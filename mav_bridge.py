@@ -75,8 +75,8 @@ class MAVBridge:
         # mark connected and start background health thread
         self.health['connected'] = True
         self.running = True
-        self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
-        self._health_thread.start()
+        #self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
+        #self._health_thread.start()
 
 
     def send_command_long(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
