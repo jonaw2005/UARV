@@ -723,7 +723,7 @@ class MAVBridge:
                     )
 
                 item = mission_items[seq]
-                self.logger.info(f"Uploading mission item {seq+1}/{count}: {item}")
+                self.logger.info(f"Uploading mission seq {seq}/{count}: {item}")
                 self._send_mission_item(seq, item)
                 uploaded += 1
 
