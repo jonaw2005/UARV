@@ -18,6 +18,7 @@ class MAVBridge:
         connection_string: e.g. 'udp:127.0.0.1:14550' or 'COM3' or '/dev/ttyUSB0'
         """
         #self.logger.debug(f"__init__")
+        self.logger = logging.getLogger("MAVBridge")
         self.connection_string = connection_string
         self.baud = baud
         self.master = None
@@ -40,7 +41,6 @@ class MAVBridge:
         }
         self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
         self._health_thread.start()
-        self.logger = logging.getLogger("MAVBridge")
 
     def _read2(self, msg_type=None, timeout=10.0):
         """Single threaded recv_match wrapper.
@@ -519,6 +519,7 @@ class MAVBridge:
     def _health_loop(self):
         # continuously collect a small set of status messages into self.health
         self.logger.debug(f"_health_loop")
+        
         while self.running:
             try:
                 try:
