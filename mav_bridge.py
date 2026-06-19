@@ -757,7 +757,7 @@ class MAVBridge:
 
 
     def download_mission_test(self):
-        mission = mu.mavlink.mission_request_list_send(1, 1, mu.mavlink.MAV_MISSION_TYPE_MISSION)
+        mission = mu.mavlink.mission_request_list(1, 1, mu.mavlink.MAV_MISSION_TYPE_MISSION)
         self.logger.info(f"Mission request list sent, got: {mission}")
         return mission
     # --------------------------------------------------
