@@ -43,7 +43,7 @@ class MAVBridge:
         #self._health_thread = None#threading.Thread(target=self._health_loop, daemon=True)
         #self._health_thread.start()
 
-    def _read2(self, msg_type=None, timeout=10.0):
+    def _read(self, msg_type=None, timeout=10.0):
         """Single threaded recv_match wrapper.
 
         Acquires _master_lock, calls recv_match, caches result in thread-local
@@ -52,8 +52,8 @@ class MAVBridge:
         self.logger.debug(f"_read")
         with self._master_lock:
             self.logger.debug(f"trying to find message {msg_type}")
-            #msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-            msg = self.master.recv_match(type=msg_type, blocking=True)
+            msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+            #msg = self.master.recv_match(type=msg_type, blocking=True)
             self.logger.debug(f"found message {msg.get_type()}")
             self._latest.value = msg
             if msg and (msg.get_type() in msg_type):
@@ -83,7 +83,7 @@ class MAVBridge:
 
         #return self._read(msg_type=msg_type, timeout=timeout)
 
-    def _read(self, msg_type=None, timeout=5.0):
+    def _read2(self, msg_type=None, timeout=5.0):
         """Read a MAVLink message of the given type(s)."""
         with self._master_lock:
             msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
@@ -101,8 +101,8 @@ class MAVBridge:
         self.master.wait_heartbeat()
         if log:
             self.logger.debug(f"Sending message: {msg}")
-        #with self._master_lock:
-        self.master.mav.send(msg)
+        with self._master_lock:
+            self.master.mav.send(msg)
 
     def connect(self, timeout=30):
         self.logger.debug(f"connect")
