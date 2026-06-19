@@ -205,7 +205,7 @@ if __name__ == "__main__":
     # Example for USB serial:
     # CONNECTION_STRING = "/dev/ttyACM0" # Linux
     # CONNECTION_STRING = "COM3" # Windows
-    CONNECTION_STRING = "/dev/AMA0" # Default for SITL
+    CONNECTION_STRING = "/dev/ttyAMA0" # Default for SITL
 
     BAUD_RATE = 57600 # Typically 57600 for serial connections
     # ---------------------
