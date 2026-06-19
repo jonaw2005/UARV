@@ -805,8 +805,8 @@ class MAVBridge:
 
         uploaded_count = 0
         while uploaded_count < num_items:
-            #msg = self._read(["MISSION_REQUEST", "MISSION_REQUEST_INT"])
-            msg = self._read("MISSION_REQUEST_INT")
+            msg = self._read(["MISSION_REQUEST", "MISSION_REQUEST_INT"])
+            #msg = self._read("MISSION_REQUEST_INT")
 
 
             if not msg:
