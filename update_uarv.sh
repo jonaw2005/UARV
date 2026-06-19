@@ -72,6 +72,7 @@ BACKUP_TARGET="$BACKUP_DIR/UARV_$TIMESTAMP"
 FORCE=false
 ROLLBACK=false
 STATUS=false
+NO_RESTART=false
 
 # --------------------------------------------------
 # ARGUMENTS
@@ -92,6 +93,10 @@ for arg in "$@"; do
         --status)
             STATUS=true
             info "Status mode"
+            ;;
+        --no-restart)
+            NO_RESTART=true
+            info "No restart mode"
             ;;
         *)
             error "Unknown argument: $arg"
@@ -186,43 +191,47 @@ info "Starting deployment..."
 
 section "STOP UARV API (WEBSOCKET SAFE)"
 
-info "Stopping service gracefully..."
+if ! $NO_RESTART; then
+    info "Stopping service gracefully..."
 
-sudo systemctl stop uarv-api
+    sudo systemctl stop uarv-api
 
-TIMEOUT=15
-COUNTER=0
+    TIMEOUT=15
+    COUNTER=0
 
-while systemctl is-active --quiet uarv-api; do
-    sleep 1
-    COUNTER=$((COUNTER+1))
+    while systemctl is-active --quiet uarv-api; do
+        sleep 1
+        COUNTER=$((COUNTER+1))
 
-    if [ $COUNTER -ge $TIMEOUT ]; then
-        error "Graceful stop timeout"
-        break
+        if [ $COUNTER -ge $TIMEOUT ]; then
+            error "Graceful stop timeout"
+            break
+        fi
+    done
+
+    if systemctl is-active --quiet uarv-api; then
+        error "Forcing SIGTERM..."
+        sudo systemctl kill -s SIGTERM uarv-api
+        sleep 5
     fi
-done
 
-if systemctl is-active --quiet uarv-api; then
-    error "Forcing SIGTERM..."
-    sudo systemctl kill -s SIGTERM uarv-api
-    sleep 5
+    if systemctl is-active --quiet uarv-api; then
+        error "Forcing SIGKILL..."
+        sudo systemctl kill -s SIGKILL uarv-api
+        sleep 2
+    fi
+
+    if systemctl is-active --quiet uarv-api; then
+        error "Cannot stop service"
+        progress_bar 100
+        echo ""
+        exit 1
+    fi
+
+    success "uarv-api fully stopped"
+else
+    info "Skipping uarv-api stop due to --no-restart flag."
 fi
-
-if systemctl is-active --quiet uarv-api; then
-    error "Forcing SIGKILL..."
-    sudo systemctl kill -s SIGKILL uarv-api
-    sleep 2
-fi
-
-if systemctl is-active --quiet uarv-api; then
-    error "Cannot stop service"
-    progress_bar 100
-    echo ""
-    exit 1
-fi
-
-success "uarv-api fully stopped"
 
 # --------------------------------------------------
 # REPOSITORY
@@ -329,15 +338,21 @@ success "Frontend deployed"
 
 section "UARV API START"
 
-if systemctl is-active --quiet uarv-api; then
-    sudo systemctl restart uarv-api
-    success "uarv-api restarted"
+if ! $NO_RESTART; then
+    if systemctl is-active --quiet uarv-api; then
+        sudo systemctl restart uarv-api
+        success "uarv-api restarted"
+    else
+        sudo systemctl start uarv-api
+        success "uarv-api started"
+    fi
 else
-    sudo systemctl start uarv-api
-    success "uarv-api started"
+    info "Skipping uarv-api restart due to --no-restart flag."
 fi
 
-systemctl is-active --quiet uarv-api && success "Service running" || error "Service failed"
+if ! $NO_RESTART; then
+    systemctl is-active --quiet uarv-api && success "Service running" || error "Service failed"
+fi
 
 # --------------------------------------------------
 # NGINX
@@ -360,6 +375,11 @@ success "Deployment finished"
 
 if [ -d "$BACKUP_TARGET" ]; then
     info "Backup: $BACKUP_TARGET"
+fi
+
+if $NO_RESTART; then
+    info "Skipping service restart. To activate the virtual environment, run: source /opt/uarv/venv/bin/activate"
+    source /opt/uarv/venv/bin/activate
 fi
 
 # --------------------------------------------------
