@@ -812,37 +812,69 @@ class MAVBridge:
             if count == 0:
                 return []
 
+            # Give Pixhawk a moment to prepare for item requests
+            time.sleep(2.0)
+
+            self.logger.info(
+                f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
+            )
+
             # 2. Request each item by seq, return raw message as dict
             for seq in range(count):
                 item = None
-                for attempt in range(3):
-                    self.master.mav.mission_request_int_send(
-                        self.master.target_system,
-                        self.master.target_component,
-                        seq
-                    )
+                for attempt in range(5):
+                    # Try MISSION_REQUEST_INT first, fall back to MISSION_REQUEST
+                    if attempt < 3:
+                        self.master.mav.mission_request_int_send(
+                            self.master.target_system,
+                            self.master.target_component,
+                            seq
+                        )
+                    else:
+                        self.master.mav.mission_request_send(
+                            self.master.target_system,
+                            self.master.target_component,
+                            seq
+                        )
 
-                    item = self.master.recv_match(
-                        type=["MISSION_ITEM_INT", "MISSION_ITEM"],
-                        blocking=True,
-                        timeout=5
-                    )
+                    self.logger.debug(f"Sent request for seq {seq} (attempt {attempt + 1})")
 
-                    if not item:
-                        self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
-                        time.sleep(0.3)
-                        continue
+                    # Read with a short non-blocking timeout in a loop so we can
+                    # also catch any stray messages the Pixhawk might send
+                    deadline = time.time() + 10
+                    while time.time() < deadline:
+                        msg = self.master.recv_match(
+                            type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
+                            blocking=True,
+                            timeout=1
+                        )
+                        if not msg:
+                            continue
+                        msg_type = msg.get_type()
+                        if msg_type in ("MISSION_ITEM_INT", "MISSION_ITEM"):
+                            item = msg
+                            break
+                        self.logger.debug(
+                            f"Ignoring {msg_type} during download (seq={getattr(msg, 'seq', '?')})"
+                        )
 
-                    if item.seq == seq:
-                        mission.append(item.to_dict())
+                    if item:
+                        self.logger.info(f"Received {item.get_type()} for seq {item.seq}")
                         break
 
-                    self.logger.debug(
-                        f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
-                    )
-                    time.sleep(0.3)
+                    self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/5)")
+                    time.sleep(0.5)
                 else:
-                    raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
+                    raise TimeoutError(f"No mission item for seq {seq} after 5 attempts")
+
+                if item.seq == seq:
+                    mission.append(item.to_dict())
+                else:
+                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, retrying...")
+                    time.sleep(0.5)
+                    # Re-request this seq
+                    seq -= 1
+                    continue
 
             return mission
 
@@ -887,38 +919,69 @@ class MAVBridge:
             if count == 0:
                 return []
 
+            # Give Pixhawk a moment to prepare for item requests
+            time.sleep(2.0)
+
+            self.logger.info(
+                f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
+            )
+
             # 2. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
             for seq in range(count):
                 item = None
-                for attempt in range(3):
-                    self.master.mav.mission_request_int_send(
-                        self.master.target_system,
-                        self.master.target_component,
-                        seq
-                    )
+                for attempt in range(5):
+                    # Try MISSION_REQUEST_INT first, fall back to MISSION_REQUEST
+                    if attempt < 3:
+                        self.master.mav.mission_request_int_send(
+                            self.master.target_system,
+                            self.master.target_component,
+                            seq
+                        )
+                    else:
+                        self.master.mav.mission_request_send(
+                            self.master.target_system,
+                            self.master.target_component,
+                            seq
+                        )
 
-                    item = self.master.recv_match(
-                        type=["MISSION_ITEM_INT", "MISSION_ITEM"],
-                        blocking=True,
-                        timeout=5
-                    )
+                    self.logger.debug(f"Sent request for seq {seq} (attempt {attempt + 1})")
 
-                    if not item:
-                        self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
-                        time.sleep(0.3)
-                        continue
+                    # Read with a short non-blocking timeout in a loop so we can
+                    # also catch any stray messages the Pixhawk might send
+                    deadline = time.time() + 10
+                    while time.time() < deadline:
+                        msg = self.master.recv_match(
+                            type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
+                            blocking=True,
+                            timeout=1
+                        )
+                        if not msg:
+                            continue
+                        msg_type = msg.get_type()
+                        if msg_type in ("MISSION_ITEM_INT", "MISSION_ITEM"):
+                            item = msg
+                            break
+                        self.logger.debug(
+                            f"Ignoring {msg_type} during download (seq={getattr(msg, 'seq', '?')})"
+                        )
 
-                    if item.seq == seq:
-                        mission.append(self._parse_mission_item(item, seq=seq))
+                    if item:
+                        self.logger.info(f"Received {item.get_type()} for seq {item.seq}")
                         break
 
-                    # Stale or out-of-order message — discard and re-request
-                    self.logger.debug(
-                        f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
-                    )
-                    time.sleep(0.3)
+                    self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/5)")
+                    time.sleep(0.5)
                 else:
-                    raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
+                    raise TimeoutError(f"No mission item for seq {seq} after 5 attempts")
+
+                if item.seq == seq:
+                    mission.append(self._parse_mission_item(item, seq=seq))
+                else:
+                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, retrying...")
+                    time.sleep(0.5)
+                    # Re-request this seq
+                    seq -= 1
+                    continue
 
             return mission
 
