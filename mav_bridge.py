@@ -790,25 +790,32 @@ class MAVBridge:
 
             count = msg.count
 
-            # 3. Items einzeln anfordern
+            # 3. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
             for seq in range(count):
+                while True:
+                    self.master.mav.mission_request_int_send(
+                        self.master.target_system,
+                        self.master.target_component,
+                        seq
+                    )
 
-                self.master.mav.mission_request_int_send(
-                    self.master.target_system,
-                    self.master.target_component,
-                    seq
-                )
+                    item = self.master.recv_match(
+                        type=["MISSION_ITEM_INT", "MISSION_ITEM"],
+                        blocking=True,
+                        timeout=5
+                    )
 
-                item = self.master.recv_match(
-                    type=["MISSION_ITEM_INT", "MISSION_ITEM"],
-                    blocking=True,
-                    timeout=5
-                )
+                    if not item:
+                        raise TimeoutError(f"No mission item for seq {seq}")
 
-                if not item:
-                    raise TimeoutError(f"No mission item for seq {seq}")
+                    if item.seq == seq:
+                        mission.append(self._parse_mission_item(item))
+                        break
 
-                mission.append(self._parse_mission_item(item))
+                    # Stale or out-of-order message — discard and re-request
+                    self.logger.debug(
+                        f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
+                    )
 
             return mission
 
@@ -818,13 +825,21 @@ class MAVBridge:
     def _parse_mission_item(self, item):
 
         cmd = item.command
+        msg_type = item.get_type()
+        is_int = msg_type == 'MISSION_ITEM_INT'
 
         # WAYPOINT
         if cmd == mu.mavlink.MAV_CMD_NAV_WAYPOINT:
+            if is_int:
+                lat = item.x / 1e7
+                lon = item.y / 1e7
+            else:
+                lat = item.lat
+                lon = item.lon
             return {
                 "type": "waypoint",
-                "lat": item.x / 1e7 if hasattr(item, "x") else item.x,
-                "lon": item.y / 1e7 if hasattr(item, "y") else item.y,
+                "lat": lat,
+                "lon": lon,
                 "alt": item.z
             }
 
