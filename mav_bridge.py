@@ -672,7 +672,7 @@ class MAVBridge:
 
         self.logger.info("Clearing existing mission...")
 
-        clear_msg = self.master.mav.mission_clear_all_message(
+        clear_msg = mu.mavlink.MAVLink_mission_clear_all_message(
             self.target_system,
             self.target_component
         )
@@ -687,7 +687,7 @@ class MAVBridge:
         self.logger.info("Mission cleared successfully.")
         time.sleep(0.5) # Give Pixhawk time to process
 
-        mission_count_msg = self.master.mav.mission_count_message(
+        mission_count_msg = mu.mavlink.MAVLink_mission_count_message(
             self.target_system,
             self.target_component,
             num_items,
@@ -703,7 +703,7 @@ class MAVBridge:
             if not msg:
                 self.logger.warning("No MISSION_REQUEST received, resending MISSION_COUNT.")
                 
-                mission_count_msg = self.master.mav.mission_count_message(
+                mission_count_msg = mu.mavlink.MAVLink_mission_count_message(
                     self.target_system,
                     self.target_component,
                     num_items,
@@ -723,7 +723,7 @@ class MAVBridge:
 
             item = mission_items[seq_to_send]
 
-            mission_item_msg = self.master.mav.mission_item_int_message(
+            mission_item_msg = mu.mavlink.MAVLink_mission_item_int_message(
                 self.target_system,
                 self.target_component,
                 seq_to_send,
