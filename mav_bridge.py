@@ -734,7 +734,7 @@ class MAVBridge:
             if not ack:
                 raise TimeoutError("No MISSION_ACK received after upload")
 
-            self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}")
+            self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}, type={ack.type}")
             return str(ack)
 
     # --------------------------------------------------
