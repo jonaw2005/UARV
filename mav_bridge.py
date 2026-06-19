@@ -56,8 +56,10 @@ class MAVBridge:
             self._latest.value = msg
             if msg and (msg.get_type() in msg_type):
                 return msg
+            else:
+                return None
 
-        return self._read(msg_type=msg_type, timeout=timeout)
+        #return self._read(msg_type=msg_type, timeout=timeout)
         
     def _write(self, msg, log: bool = True):
         """Single threaded mav.send wrapper."""
