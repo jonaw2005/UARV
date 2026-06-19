@@ -1,6 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
-
 from flask import Flask, Response, jsonify, request
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -16,7 +13,7 @@ from mav_bridge import MAVBridge
 
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -26,25 +23,12 @@ logging.basicConfig(
 started = False
 running = True
 
-#edit
-
-def start_background():
-    global started
-    global running
-    if not started:
-        started = True
-        running = True
-        socketio.start_background_task(stream_video)
-
-@socketio.on("connect")
-def handle_connect():
-    print("Client connected")
-    start_background()
-
 # Initialize a single shared MAVBridge instance and execution pool
 bridge = MAVBridge("/dev/ttyAMA0", baud=921600)
 bridge.connect()
-executor = ThreadPoolExecutor(max_workers=1)
+
+# Increased from max_workers=1 to avoid serial bottleneck
+executor = ThreadPoolExecutor(max_workers=4)
 
 # Simple in-memory state
 state = {
@@ -75,28 +59,20 @@ camera = cv2.VideoCapture(cam_index)
 print("Using camera:", cam_index)
 
 def stream_video():
-    #print("vor while true")
     global running, camera
     while running:
-            #print("vor camera.read()")
             success, frame = camera.read()
             if not success:
-                #print("Failed to read frame")
                 camera.release()
-                time.sleep(1)  # Wait a bit before trying to reconnect
+                time.sleep(1)
                 camera.open(cam_index)
                 continue
 
             _, buffer = cv2.imencode('.jpg', frame)
             jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-            #print(jpg_as_text[:100])  # Debug: print the beginning of the encoded frame
-            #print("nach jpg_as_text")  # Debug: confirm we reached this point
             socketio.emit('video_frame', jpg_as_text)
 
             socketio.sleep(0.03)  # ~30 FPS
-
-
-
 
 def generate_frames():
     while True:
@@ -130,6 +106,20 @@ def generate_video():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
+
+def start_background():
+    global started
+    global running
+    if not started:
+        started = True
+        running = True
+        socketio.start_background_task(stream_video)
+
+@socketio.on("connect")
+def handle_connect():
+    print("Client connected")
+    start_background()
+
 @app.before_request
 def log_request():
     logging.info(f"{request.remote_addr} {request.method} {request.path}")
@@ -153,7 +143,6 @@ def index():
 
 @app.route('/video')
 def video():
-	#return Response(generate_video(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame', status=200)
 
 
@@ -499,7 +488,6 @@ def upload_mission():
     #mav_items = translate_mission(mission_json)
     mav_items = mission_json
     logging.info("Translated MAVLink items: %s", mav_items)
-    #logging.warning("Translated MAVLink items: %s", mav_items)
     try:
         future = run_task(bridge.upload_mission, mav_items)
         response = future.result(timeout=30)
@@ -594,16 +582,17 @@ def is_armed():
 
 @app.route("/arm_disarm", methods=["GET"])
 def arm_disarm():
-    if is_armed() == "True":
-        future = run_task(bridge.disarm)
-        return jsonify({"status": "disarm requested", "task_id": id(future)})
-    elif is_armed() == "False":
-        future = run_task(bridge.arm)
-        return jsonify({"status": "arm requested", "task_id": id(future)})
-    else:
-        return jsonify({"error": "unable to determine armed status"}), 500
+    # FIXED: Submit the whole check+command as a single task so it doesn't block
+    def _toggle_arm():
+        if bridge.is_armed():
+            bridge.disarm()
+            return {"status": "disarm requested"}
+        else:
+            bridge.arm()
+            return {"status": "arm requested"}
 
-    
+    future = run_task(_toggle_arm)
+    return jsonify(future.result(timeout=15))
 
 @app.route("/change_nv", methods=["GET"])
 def change_nv():
@@ -621,4 +610,3 @@ def cleanup():
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000)
-

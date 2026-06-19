@@ -17,7 +17,6 @@ class MAVBridge:
 
         connection_string: e.g. 'udp:127.0.0.1:14550' or 'COM3' or '/dev/ttyUSB0'
         """
-        #self.logger.debug(f"__init__")
         self.logger = logging.getLogger("MAVBridge")
         self.connection_string = connection_string
         self.baud = baud
@@ -39,66 +38,39 @@ class MAVBridge:
             'last_heartbeat': None,
             'system_status': None,
         }
-        #self.connect()
-        #self._health_thread = None#threading.Thread(target=self._health_loop, daemon=True)
-        #self._health_thread.start()
 
     def _read(self, msg_type=None, timeout=10.0):
         """Single threaded recv_match wrapper.
 
         Acquires _master_lock, calls recv_match, caches result in thread-local
         self._latest, releases lock, and returns the message.
+
+        FIXED: Handles None msg, None msg_type, and no longer crashes on timeout.
         """
-        self.logger.debug(f"_read")
         with self._master_lock:
-            self.logger.debug(f"trying to find message {msg_type}")
             msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-            #msg = self.master.recv_match(type=msg_type, blocking=True)
-            self.logger.debug(f"found message {msg.get_type()}")
-            self._latest.value = msg
-            if msg and (msg.get_type() in msg_type):
-                return msg
-            else:
+
+            if msg is None:
                 return None
 
-        #return self._read(msg_type=msg_type, timeout=timeout)
+            self._latest.value = msg
 
-    def _read1(self, msg_type=None, timeout=5):
-        """Single threaded recv_match wrapper.
+            # If msg_type is None, accept any message
+            if msg_type is None:
+                return msg
 
-        Acquires _master_lock, calls recv_match, caches result in thread-local
-        self._latest, releases lock, and returns the message.
-        """
-        self.logger.debug(f"_read")
-        
-        self.logger.debug(f"trying to find message {msg_type}")
-        msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-        #msg = self.master.recv_match(type=msg_type, blocking=True)
-        self.logger.debug(f"found message {msg.get_type()}")
-        #self._latest.value = msg
-        if msg:# and (msg.get_type() in msg_type):
-            return msg
-        else:
-            return None
+            # msg_type can be a string or a list/tuple
+            if isinstance(msg_type, (list, tuple)):
+                return msg if msg.get_type() in msg_type else None
+            else:
+                return msg if msg.get_type() == msg_type else None
 
-        #return self._read(msg_type=msg_type, timeout=timeout)
-
-    def _read2(self, msg_type=None, timeout=5.0):
-        """Read a MAVLink message of the given type(s)."""
-        with self._master_lock:
-            msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-        if msg is None:
-            return None
-        # `msg_type` can be a string or a list/tuple
-        if isinstance(msg_type, (list, tuple)):
-            return msg if msg.get_type() in msg_type else None
-        else:
-            return msg if msg.get_type() == msg_type else None
-        
     def _write(self, msg, log: bool = True):
-        """Single threaded mav.send wrapper."""
-        self.logger.debug(f"_write")
-        self.master.wait_heartbeat()
+        """Single threaded mav.send wrapper.
+
+        FIXED: Removed wait_heartbeat() — that was causing ~1s delay on EVERY write.
+        Heartbeat sync is only needed during initial connection.
+        """
         if log:
             self.logger.debug(f"Sending message: {msg}")
         with self._master_lock:
@@ -112,17 +84,13 @@ class MAVBridge:
             source_system=self.source_system,
             autoreconnect=True,
         )
+        # wait_heartbeat is fine HERE — only called once during connection setup
         self.master.wait_heartbeat()
-        # mark connected and start background health thread
         self.health['connected'] = True
         self.running = True
         self.target_system = self.master.target_system
         self.target_component = self.master.target_component
-        #self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
-        #self._health_thread.start()
 
-
-# done
     def command_long_send(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
         self.logger.debug(f"send_command_long")
 
@@ -141,7 +109,6 @@ class MAVBridge:
         )
         self._write(command_long_message)
 
-# done
     def _arm_disarm_sync(self, arm: bool, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Synchronously send arm/disarm command and wait for COMMAND_ACK.
@@ -177,7 +144,6 @@ class MAVBridge:
 
         return False
 
-# done
     def arm(self, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Arms the vehicle and waits for confirmation.
@@ -187,7 +153,6 @@ class MAVBridge:
         self.logger.debug(f"arm")
         return self._arm_disarm_sync(arm=True, force=force, timeout=timeout)
 
-# done
     def disarm(self, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Disarms the vehicle and waits for confirmation.
@@ -197,7 +162,6 @@ class MAVBridge:
         self.logger.debug(f"disarm")
         return self._arm_disarm_sync(arm=False, force=force, timeout=timeout)
 
-# done
     def is_armed(self, timeout=3):
         """Return True if the vehicle is armed, False if disarmed."""
         self.logger.debug(f"is_armed")
@@ -208,7 +172,6 @@ class MAVBridge:
 
         return bool(msg.base_mode & mu.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
 
-# done
     def goto(self, lat, lon, alt):
             """
             Send a GPS waypoint (global position target).
@@ -239,7 +202,6 @@ class MAVBridge:
 
             self._write(set_position_target_global_int_message)
 
-#done
     def get_all_params(self):
         self.logger.debug(f"get_all_params")
 
@@ -292,7 +254,6 @@ class MAVBridge:
         self.logger.info(f"Fertig: {len(params)} Parameter")
         return params
 
-# done
     def get_param(self, name):
         self.logger.debug(f"get_param")
 
@@ -317,7 +278,6 @@ class MAVBridge:
             else:
                 raise TimeoutError(f"Timeout waiting for parameter {name}")
 
-# done
     def get_telemetry(self, timeout=5):
         """Request current telemetry and return a JSON-friendly dict."""
         self.logger.debug(f"get_telemetry")
@@ -394,7 +354,6 @@ class MAVBridge:
 
         return telemetry
 
-# done
     def get_gps_status(self, timeout=5):
         self.logger.debug(f"get_gps_status")
         try:
@@ -430,7 +389,6 @@ class MAVBridge:
 
         return gps_status
 
-# done
     def get_gps_raw(self, timeout=5, hz: int = 5):
         self.logger.debug(f"get_gps_raw")
         interval_us = int(1e6 / hz)
@@ -472,7 +430,6 @@ class MAVBridge:
 
         return gps_raw
 
-# done
     def get_gps_int(self, timeout=5, hz: int=5):
         self.logger.debug(f"get_gps_int")
         interval_us = int(1e6 / hz)
@@ -516,7 +473,6 @@ class MAVBridge:
 
         return gps_int
 
-# not needed anymore
     def _health_loop(self):
         # continuously collect a small set of status messages into self.health
         self.logger.debug(f"_health_loop")
@@ -539,7 +495,7 @@ class MAVBridge:
                 start = time.time()
                 # collect messages for a short window
                 while time.time() - start < 0.8:
-                    msg = self._read(type=['SYS_STATUS','GPS_RAW_INT','HEARTBEAT'], timeout=0.3)
+                    msg = self._read(msg_type=['SYS_STATUS','GPS_RAW_INT','HEARTBEAT'], timeout=0.3)
                     if not msg:
                         continue
                     t = msg.get_type()
@@ -562,13 +518,11 @@ class MAVBridge:
                 pass
             time.sleep(1.0)
 
-# unused
     def get_health(self):
         # return a shallow copy of health dictionary
         self.logger.debug(f"get_health")
         return dict(self.health)
 
-# done
     def battery_level(self, timeout=3):
         """
         Request and return battery status from the autopilot.
@@ -613,7 +567,6 @@ class MAVBridge:
             'remaining': self.health.get('battery_remaining'),
         }
 
-# done
     def get_location(self):
         self.logger.debug(f"get_location")
         telemetry = self.get_telemetry()
@@ -626,7 +579,7 @@ class MAVBridge:
 
 
     # -----------------------------
-    # VELOCITY CONTROL (dein Beispiel) # done
+    # VELOCITY CONTROL (dein Beispiel)
     # -----------------------------
     def set_velocity(self, vx, vy, vz):
         """
@@ -654,7 +607,7 @@ class MAVBridge:
         self._write(set_position_target_local_ned_message)
 
     # -----------------------------
-    # TAKEOFF (GUIDED MODE) # done
+    # TAKEOFF (GUIDED MODE)
     # -----------------------------
     def takeoff(self, altitude):
         self.logger.debug(f"takeoff")
@@ -669,7 +622,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # RTL # done
+    # RTL
     # -----------------------------
     def rtl(self):
         self.logger.debug(f"rtl")
@@ -682,7 +635,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # LAND # done
+    # LAND
     # -----------------------------
     def land(self):
         self.logger.debug(f"land")
@@ -695,7 +648,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CHANGE SPEED # done
+    # CHANGE SPEED
     # -----------------------------
     def set_speed(self, speed, airspeed=True):
         self.logger.debug(f"set_speed")
@@ -713,7 +666,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CONDITION YAW # done
+    # CONDITION YAW
     # -----------------------------
     def condition_yaw(self, heading, relative=False, speed=0, direction=0):
         self.logger.debug(f"condition_yaw")
@@ -730,7 +683,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # LOITER TIME (guided trigger) # done
+    # LOITER TIME (guided trigger)
     # -----------------------------
     def loiter_time(self, seconds):
         self.logger.debug(f"loiter_time")
@@ -749,7 +702,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CHANGE ALTITUDE (guided) # done
+    # CHANGE ALTITUDE (guided)
     # -----------------------------
     def change_altitude(self, altitude):
         self.logger.debug(f"change_altitude")
@@ -763,7 +716,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # SET MODE (optional but useful) # done
+    # SET MODE (optional but useful)
     # -----------------------------
     def set_mode(self, mode):
         self.logger.debug(f"set_mode")
@@ -784,7 +737,7 @@ class MAVBridge:
 
 
     # --------------------------------------------------
-    # PUBLIC: Mission Upload Entry Point # done
+    # PUBLIC: Mission Upload Entry Point
     # --------------------------------------------------
 
     def upload_mission(self, mission_items):
@@ -823,8 +776,6 @@ class MAVBridge:
         uploaded_count = 0
         while uploaded_count < num_items:
             msg = self._read(["MISSION_REQUEST", "MISSION_REQUEST_INT"])
-            #msg = self._read("MISSION_REQUEST_INT")
-
 
             if not msg:
                 self.logger.warning("No MISSION_REQUEST received, resending MISSION_COUNT.")
@@ -884,7 +835,7 @@ class MAVBridge:
 
 
     # --------------------------------------------------
-    # INTERNAL: send single item # done
+    # INTERNAL: send single item
     # --------------------------------------------------
     def _send_mission_item(self, seq, item):
         self.logger.debug(f"_send_mission_item")
@@ -908,7 +859,6 @@ class MAVBridge:
         self._write(mission_item_int_message)
 
 
-# done
     def download_mission(self, timeout=10):
         """Downloads the mission from the Pixhawk and returns a list of items."""
         self.logger.debug(f"download_mission_test_2")
@@ -977,7 +927,7 @@ class MAVBridge:
 
 
     # --------------------------------------------------
-    # INTERNAL: MAVLink → JSON # done
+    # INTERNAL: MAVLink → JSON
     # --------------------------------------------------
     def _parse_mission_item(self, item, seq=None):
         self.logger.debug(f"_parse_mission_item")
@@ -1087,7 +1037,6 @@ class MAVBridge:
             "command": cmd
         }
 
-#done
     def change_mode(self, mode):
         self.logger.debug(f"change_mode")
         mode_mapping = self.master.mode_mapping()
@@ -1104,7 +1053,6 @@ class MAVBridge:
         )
         self._write(set_mode_message)
 
-#done
     def abort_mission(self):
         self.logger.debug(f"abort_mission")
         # example: disarm and set mode to MANUAL
@@ -1112,14 +1060,12 @@ class MAVBridge:
         time.sleep(0.5)
         self.change_mode("MANUAL")
 
-#done
     def start_mission(self):
         self.logger.debug(f"start_mission")
         # example: set mode to AUTO
         self.change_mode("AUTO")
 
 
-#done
     def get_mode(self):
         self.logger.debug(f"get_mode")
 
@@ -1134,18 +1080,17 @@ class MAVBridge:
         self._write(request_data_stream_message)
 
         while True:
-            msg = self._read(msg_type=None, timeout=5)
-            if msg and msg.get_type() == 'HEARTBEAT':
+            msg = self._read(msg_type='HEARTBEAT', timeout=5)
+            if msg:
                 mode_id = msg.custom_mode
                 mode_mapping = self.master.mode_mapping()
                 for mode_name, mid in mode_mapping.items():
                     if mid == mode_id:
                         return mode_name
                 return f"UNKNOWN({mode_id})"
-            elif not msg:
+            else:
                 raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
 
-#TODO: edit to message
     def start_rc_override(self):
         self.logger.debug(f"start_rc_override")
         while True:
