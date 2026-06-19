@@ -604,10 +604,15 @@ class MAVBridge:
     # -----------------------------
     # TAKEOFF (GUIDED MODE)
     # -----------------------------
-    def takeoff(self, altitude=10):
+    def takeoff(self, altitude=50):
         self.logger.debug(f"takeoff")
         # First set mode to GUIDED so the takeoff command is accepted
-        self.change_mode("GUIDED")
+        set_mode_message = mu.mavlink.MAVLink_set_mode_message(
+            self.master.target_system,
+            mu.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            13 # 13 for takeoff
+        )
+        self._write(set_mode_message)
         time.sleep(0.5)
         # Then send the takeoff command
         self.command_long_send(
