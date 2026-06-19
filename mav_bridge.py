@@ -604,16 +604,22 @@ class MAVBridge:
     # -----------------------------
     # TAKEOFF (GUIDED MODE)
     # -----------------------------
-    def takeoff(self, altitude):
+    def takeoff(self, altitude=10):
         self.logger.debug(f"takeoff")
+        # First set mode to GUIDED so the takeoff command is accepted
+        self.change_mode("GUIDED")
+        time.sleep(0.5)
+        # Then send the takeoff command
         self.command_long_send(
-            self.master.target_system,
-            self.master.target_component,
             mu.mavlink.MAV_CMD_NAV_TAKEOFF,
-            0,
-            0, 0, 0, 0,
-            0, 0,
-            altitude
+            param1=0,      # min pitch
+            param2=0,      # empty
+            param3=0,      # empty
+            param4=0,      # yaw angle (0 = use current heading)
+            param5=0,      # latitude (0 = current)
+            param6=0,      # longitude (0 = current)
+            param7=altitude,  # altitude in meters
+            confirmation=0
         )
 
     # -----------------------------
