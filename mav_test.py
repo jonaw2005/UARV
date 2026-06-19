@@ -164,6 +164,21 @@ def main():
     except Exception as e:
         check("translate_mission()", False, str(e))
 
+    # ── 14. Mission download ─────────────────────────────────────────────────
+    print("\n[14] download_mission() — requires Pixhawk with stored mission")
+    try:
+        mission = bridge.download_mission()
+        check("download_mission() returns list", isinstance(mission, list))
+        if len(mission) > 0:
+            check("first item has 'seq'", "seq" in mission[0])
+            check("first item has 'type'", "type" in mission[0])
+            check("seq is int", isinstance(mission[0]["seq"], int))
+            print(f"  INFO  Downloaded {len(mission)} items")
+        else:
+            print("  INFO  No mission stored on Pixhawk (empty mission is valid)")
+    except Exception as e:
+        check("download_mission()", False, str(e))
+
     # ── Summary ─────────────────────────────────────────────────────────────
     print(f"\n{'='*50}")
     print(f"  PASS: {passed}  |  FAIL: {failed}  |  TOTAL: {passed + failed}")
