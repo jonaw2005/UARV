@@ -101,8 +101,8 @@ class MAVBridge:
         self.master.wait_heartbeat()
         if log:
             self.logger.debug(f"Sending message: {msg}")
-        with self._master_lock:
-            self.master.mav.send(msg)
+        #with self._master_lock:
+        self.master.mav.send(msg)
 
     def connect(self, timeout=30):
         self.logger.debug(f"connect")
