@@ -39,7 +39,7 @@ class MAVBridge:
             'system_status': None,
         }
         self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
-
+        self._health_thread.start()
         self.logger = logging.getLogger("MAVBridge")
 
     def _read2(self, msg_type=None, timeout=10.0):
