@@ -150,9 +150,9 @@ function startArmStatusPoll() {
     }
   }
 
-  // Poll every 2 seconds
+  // Poll every 3 seconds
   poll();
-  armPollInterval = setInterval(poll, 2000);
+  armPollInterval = setInterval(poll, 3000);
 }
 
 function stopArmStatusPoll() {
@@ -200,6 +200,9 @@ function setupActionButtons() {
   buttons[3].disabled = false;
   buttons[3].id = 'abortBtn';
   buttons[3].addEventListener('click', abort_mission);
+
+  // Start arm status polling every 3 seconds
+  startArmStatusPoll();
 }
 
 window.addEventListener('DOMContentLoaded', setupActionButtons);
