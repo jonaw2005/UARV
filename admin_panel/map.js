@@ -219,6 +219,126 @@ if (telemetryBtn) {
 }
 
 // ── Mission Order button ────────────────────────────────────────────────────
+// ── MAVLink command mapping ────────────────────────────────────────────────
+const MAV_CMD = {
+  16:  'WAYPOINT',
+  17:  'LOITER_UNLIM',
+  18:  'LOITER_TURNS',
+  19:  'LOITER_TIME',
+  20:  'RTL',
+  21:  'LAND',
+  22:  'TAKEOFF',
+  23:  'LOITER_TO_ALT',
+  24:  'DO_FOLLOW',
+  30:  'CONTINUE_AND_CHANGE_ALT',
+  31:  'DO_LAND_START',
+  92:  'NAV_VTOL_TAKEOFF',
+  93:  'DELAY',
+  94:  'NAV_VTOL_LAND',
+  95:  'NAV_GUIDED_ENABLE',
+  96:  'NAV_GUIDED',
+  112: 'DO_JUMP',
+  113: 'DO_CHANGE_SPEED',
+  114: 'DO_SET_HOME',
+  115: 'CONDITION_YAW',
+  140: 'DO_SET_SERVO',
+  141: 'DO_SET_RELAY',
+  176: 'DO_DIGICAM_CONFIGURE',
+  177: 'DO_DIGICAM_CONTROL',
+  178: 'DO_CHANGE_SPEED',
+  179: 'DO_SET_CAM_TRIGG_DIST',
+  180: 'DO_CHANGE_ALTITUDE',
+  181: 'DO_LAND_START',
+  183: 'DO_SET_ROI',
+  184: 'DO_DIGICAM_CONFIGURE',
+  185: 'DO_SET_CAM_TRIGG_INTERVAL',
+  186: 'DO_SET_MOUNT_CONTROL',
+  189: 'DO_CONTROL_VIDEO',
+  190: 'DO_SET_ROI_LOCATION',
+  191: 'DO_SET_ROI_SYSID',
+  200: 'DO_GUIDED_CONTROL',
+  300: 'DO_AUTOTUNE_ENABLE',
+  400: 'NAV_PAYLOAD_PLACE',
+};
+
+const COMMAND_LABELS = {
+  16:  'Waypoint',
+  17:  'Loiter (Unlimited)',
+  18:  'Loiter (Turns)',
+  19:  'Loiter (Time)',
+  20:  'Return to Launch',
+  21:  'Land',
+  22:  'Takeoff',
+  23:  'Loiter to Alt',
+  24:  'Do Follow',
+  30:  'Continue & Change Alt',
+  31:  'Land Start',
+  92:  'VTOL Takeoff',
+  93:  'Delay',
+  94:  'VTOL Land',
+  95:  'Guided Enable',
+  96:  'Guided',
+  112: 'Jump',
+  113: 'Change Speed',
+  114: 'Set Home',
+  115: 'Condition Yaw',
+  140: 'Set Servo',
+  141: 'Set Relay',
+  176: 'Digicam Configure',
+  177: 'Digicam Control',
+  178: 'Change Speed',
+  179: 'Cam Trig Distance',
+  180: 'Change Altitude',
+  181: 'Land Start',
+  183: 'Set ROI',
+  184: 'Digicam Configure',
+  185: 'Cam Trig Interval',
+  186: 'Mount Control',
+  189: 'Control Video',
+  190: 'Set ROI Location',
+  191: 'Set ROI SysID',
+  200: 'Guided Control',
+  300: 'Autotune Enable',
+  400: 'Payload Place',
+};
+
+const COMMAND_ICONS = {
+  16:  '📍',
+  17:  '🔄',
+  18:  '🔄',
+  19:  '🔄',
+  20:  '🏠',
+  21:  '🛬',
+  22:  '🛫',
+  23:  '↕️',
+  31:  '🛬',
+  92:  '🛫',
+  93:  '⏱️',
+  94:  '🛬',
+  112: '⤵️',
+  113: '🚀',
+  115: '🧭',
+  140: '🔧',
+  178: '🚀',
+  180: '↕️',
+  181: '🛬',
+};
+
+const COMMAND_BADGES = {
+  16:  'badge-waypoint',
+  17:  'badge-loiter',
+  18:  'badge-loiter',
+  19:  'badge-loiter',
+  20:  'badge-rtl',
+  21:  'badge-land',
+  22:  'badge-takeoff',
+  93:  'badge-delay',
+  113: 'badge-speed',
+  115: 'badge-yaw',
+  178: 'badge-speed',
+  180: 'badge-alt',
+  181: 'badge-land',
+};
 
 const missionWindow = document.getElementById('missionWindow');
 const missionContent = document.getElementById('missionContent');
@@ -226,63 +346,82 @@ const missionContent = document.getElementById('missionContent');
 function showMissionWindow(missionData) {
   if (!missionContent || !missionWindow) return;
 
-  const items = missionData?.mission;
+  // The API returns a flat array directly (not wrapped in {mission: [...]})
+  // Also support {mission: [...]} format in case it changes
+  const items = Array.isArray(missionData) ? missionData : (missionData?.mission || []);
+
   if (!items || items.length === 0) {
     missionContent.innerHTML = '<div class="mission-empty">📋 Use the Mission Planner to create and upload a mission.</div>';
   } else {
     missionContent.innerHTML = items.map((item, idx) => {
-      const type = item.type || 'unknown';
-      const action = item.action || '';
-      const lat = item.lat != null ? item.lat.toFixed(6) : null;
-      const lon = item.lon != null ? item.lon.toFixed(6) : null;
-      const alt = item.alt ?? item.param ?? null;
+      const cmd = item.command;
+      const label = COMMAND_LABELS[cmd] || `Unknown (${cmd})`;
+      const icon = COMMAND_ICONS[cmd] || '⚡';
+      const badge = COMMAND_BADGES[cmd] || 'badge-action';
 
-      // Icon and badge color based on type
-      let icon = '📍';
-      let badgeClass = 'badge-waypoint';
-      if (type === 'action') {
-        switch (action) {
-          case 'takeoff':       icon = '🛫'; badgeClass = 'badge-takeoff'; break;
-          case 'land':          icon = '🛬'; badgeClass = 'badge-land'; break;
-          case 'rtl':           icon = '🏠'; badgeClass = 'badge-rtl'; break;
-          case 'loiter':        icon = '🔄'; badgeClass = 'badge-loiter'; break;
-          case 'set_speed':     icon = '🚀'; badgeClass = 'badge-speed'; break;
-          case 'change_alt':    icon = '↕️'; badgeClass = 'badge-alt'; break;
-          case 'delay':         icon = '⏱️'; badgeClass = 'badge-delay'; break;
-          case 'condition_yaw': icon = '🧭'; badgeClass = 'badge-yaw'; break;
-          case 'land_start':    icon = '🛬'; badgeClass = 'badge-land'; break;
-          default:              icon = '⚡'; badgeClass = 'badge-action'; break;
-        }
+      // Convert x/y from 1e7 format to decimal degrees (only for waypoint-like commands with lat/lon)
+      let lat = null;
+      let lon = null;
+      let alt = null;
+
+      if (item.x !== 0 || item.y !== 0) {
+        // x and y in MAVLink are int (1e7 scale for lat/lon) when frame is GLOBAL
+        lat = item.x / 1e7;
+        lon = item.y / 1e7;
+      }
+      if (item.z !== 0) {
+        alt = item.z;
       }
 
-      const actionLabels = {
-        takeoff: 'Takeoff',
-        land: 'Land',
-        rtl: 'Return to Launch',
-        loiter: 'Loiter (Time)',
-        set_speed: 'Set Speed',
-        change_alt: 'Change Altitude',
-        delay: 'Delay',
-        condition_yaw: 'Condition Yaw',
-        land_start: 'Land Start',
-      };
-      const displayName = type === 'action'
-        ? (actionLabels[action] || action.replace(/_/g, ' '))
-        : type;
+      // Build param info string for non-waypoint commands
+      let paramStr = '';
+      if (cmd === 22 && item.param1 !== 0) {
+        // Takeoff: param1 = min pitch, but alt is in z
+        alt = item.z;
+      } else if (cmd === 19) {
+        // Loiter time: param1 = seconds
+        if (item.param1 !== 0) paramStr = `${item.param1}s`;
+      } else if (cmd === 93) {
+        // Delay: param1 = seconds
+        if (item.param1 !== 0) paramStr = `${item.param1}s`;
+      } else if (cmd === 113 || cmd === 178) {
+        // Change speed: param2 = speed, param1 = type (0=airspeed, 1=ground)
+        if (item.param2 !== 0) paramStr = `${item.param2} m/s`;
+      } else if (cmd === 115) {
+        // Condition yaw: param1 = angle, param4 = relative (0=absolute, 1=relative)
+        if (item.param1 !== 0) paramStr = `${item.param1}°`;
+        if (item.param4 !== 0) paramStr += ' (relative)';
+      } else if (cmd === 180) {
+        // Change altitude: param1 = alt
+        if (item.param1 !== 0) paramStr = `${item.param1}m`;
+      } else if (cmd === 31 || cmd === 181) {
+        // Land start
+      } else if (cmd === 112) {
+        // Jump: param1 = sequence, param2 = repeat count
+        paramStr = `seq ${item.param1} × ${item.param2}`;
+      } else if (cmd === 140) {
+        // Set servo: param1 = servo, param2 = pwm
+        paramStr = `servo ${item.param1} → ${item.param2}µs`;
+      }
 
       // Location line
       let locationStr = '';
-      if (lat && lon) locationStr = `<span class="mission-coords">${lat}, ${lon}</span>`;
-      if (alt != null) {
+      if (lat && lon) {
+        locationStr = `<span class="mission-coords">${lat.toFixed(6)}, ${lon.toFixed(6)}</span>`;
+      }
+      if (alt != null && alt !== 0) {
         const altVal = typeof alt === 'number' ? alt.toFixed(1) : alt;
         locationStr += locationStr ? ` · ${altVal}m` : `<span class="mission-alt">${altVal}m</span>`;
+      }
+      if (paramStr) {
+        locationStr += locationStr ? ` · ${paramStr}` : `<span class="mission-param">${paramStr}</span>`;
       }
 
       return `
         <div class="mission-item">
           <div class="mission-item-header">
             <span class="mission-step">${icon}<span class="step-num">${idx + 1}</span></span>
-            <span class="mission-type ${badgeClass}">${displayName}</span>
+            <span class="mission-type ${badge}">${label}</span>
           </div>
           ${locationStr ? `<div class="mission-location">${locationStr}</div>` : ''}
         </div>`;
