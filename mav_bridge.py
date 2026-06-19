@@ -42,7 +42,7 @@ class MAVBridge:
 
         self.logger = logging.getLogger("MAVBridge")
 
-    def _read(self, msg_type=None, timeout=10.0):
+    def _read2(self, msg_type=None, timeout=10.0):
         """Single threaded recv_match wrapper.
 
         Acquires _master_lock, calls recv_match, caches result in thread-local
@@ -59,6 +59,26 @@ class MAVBridge:
                 return msg
             else:
                 return None
+
+        #return self._read(msg_type=msg_type, timeout=timeout)
+
+    def _read(self, msg_type=None, timeout=10.0):
+        """Single threaded recv_match wrapper.
+
+        Acquires _master_lock, calls recv_match, caches result in thread-local
+        self._latest, releases lock, and returns the message.
+        """
+        self.logger.debug(f"_read")
+        
+        self.logger.debug(f"trying to find message {msg_type}")
+        #msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+        msg = self.master.recv_match(type=msg_type, blocking=True)
+        self.logger.debug(f"found message {msg.get_type()}")
+        self._latest.value = msg
+        if msg and (msg.get_type() in msg_type):
+            return msg
+        else:
+            return None
 
         #return self._read(msg_type=msg_type, timeout=timeout)
         
