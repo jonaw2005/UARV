@@ -507,6 +507,18 @@ def download_mission():
         "mission": mission
     }), 202
 
+
+@app.route("/mission_download_raw", methods=["GET"])
+def download_mission_raw():
+    try:
+        future = run_task(bridge.download_mission_raw)
+        raw = future.result()
+        return jsonify({
+            "mission": raw
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/mission_start", methods=["GET"])
 def start_mission():
     future = run_task(bridge.start_mission)

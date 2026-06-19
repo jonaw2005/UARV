@@ -760,8 +760,66 @@ class MAVBridge:
         )
 
 
- # --------------------------------------------------
-    # DOWNLOAD MISSION FROM AUTOPILOT
+    # --------------------------------------------------
+    # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
+    # --------------------------------------------------
+    def download_mission_raw(self):
+        """
+        Download mission and return raw MAVLink message dicts
+        (no translation / parsing — original MAVLink field names).
+        """
+        with self._master_lock:
+
+            mission = []
+
+            # 1. Request Mission List
+            self.master.mav.mission_request_list_send(
+                self.master.target_system,
+                self.master.target_component
+            )
+
+            # 2. Wait for count
+            msg = self.master.recv_match(
+                type="MISSION_COUNT",
+                blocking=True,
+                timeout=5
+            )
+
+            if not msg:
+                raise TimeoutError("No MISSION_COUNT received")
+
+            count = msg.count
+
+            # 3. Request each item by seq, return raw message as dict
+            for seq in range(count):
+                while True:
+                    self.master.mav.mission_request_int_send(
+                        self.master.target_system,
+                        self.master.target_component,
+                        seq
+                    )
+
+                    item = self.master.recv_match(
+                        type=["MISSION_ITEM_INT", "MISSION_ITEM"],
+                        blocking=True,
+                        timeout=5
+                    )
+
+                    if not item:
+                        raise TimeoutError(f"No mission item for seq {seq}")
+
+                    if item.seq == seq:
+                        mission.append(item.to_dict())
+                        break
+
+                    self.logger.debug(
+                        f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
+                    )
+
+            return mission
+
+    # --------------------------------------------------
+    # DOWNLOAD MISSION FROM AUTOPILOT (parsed / translated)
     # --------------------------------------------------
     def download_mission(self):
         """
