@@ -12,7 +12,7 @@ import atexit
 import logging
 from pymavlink import mavutil
 
-from mav_bridge_backup import MAVBridge
+from mav_bridge import MAVBridge
 
 
 app = Flask(__name__)
@@ -42,7 +42,7 @@ def handle_connect():
     start_background()
 
 # Initialize a single shared MAVBridge instance and execution pool
-bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
+bridge = MAVBridge("/dev/ttyAMA0", baud=9600)
 bridge.connect()
 executor = ThreadPoolExecutor(max_workers=1)
 
