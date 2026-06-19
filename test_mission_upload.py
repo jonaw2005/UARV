@@ -205,9 +205,9 @@ if __name__ == "__main__":
     # Example for USB serial:
     # CONNECTION_STRING = "/dev/ttyACM0" # Linux
     # CONNECTION_STRING = "COM3" # Windows
-    CONNECTION_STRING = "udp:127.0.0.1:14550" # Default for SITL
+    CONNECTION_STRING = "/dev/AMA0" # Default for SITL
 
-    BAUD_RATE = 115200 # Typically 115200 for serial connections
+    BAUD_RATE = 57600 # Typically 57600 for serial connections
     # ---------------------
 
     uploader = MissionUploader(CONNECTION_STRING, BAUD_RATE)
