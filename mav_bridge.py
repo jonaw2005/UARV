@@ -446,20 +446,22 @@ class MAVBridge:
         while self.running:
             try:
                 try:
-                    self.master.mav.request_data_stream_send(
+                    request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
                         self.master.target_system,
                         self.master.target_component,
                         mu.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,
                         1,
-                        1,
+                        1
                     )
+                    
+                    self._write(request_data_stream_message)
                 except Exception:
                     pass
 
                 start = time.time()
                 # collect messages for a short window
                 while time.time() - start < 0.8:
-                    msg = self._read(timeout=0.3)
+                    msg = self._read(type=['SYS_STATUS','GPS_RAW_INT','HEARTBEAT'], timeout=0.3)
                     if not msg:
                         continue
                     t = msg.get_type()
