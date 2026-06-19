@@ -783,27 +783,36 @@ class MAVBridge:
 
             mission = []
 
-            # 1. Request Mission List
-            self.master.mav.mission_request_list_send(
-                self.master.target_system,
-                self.master.target_component
-            )
+            # 1. Request Mission List (with retry)
+            for attempt in range(3):
+                self.master.mav.mission_request_list_send(
+                    self.master.target_system,
+                    self.master.target_component
+                )
 
-            # 2. Wait for count
-            msg = self.master.recv_match(
-                type="MISSION_COUNT",
-                blocking=True,
-                timeout=5
-            )
+                msg = self.master.recv_match(
+                    type="MISSION_COUNT",
+                    blocking=True,
+                    timeout=5
+                )
 
-            if not msg:
-                raise TimeoutError("No MISSION_COUNT received")
+                if msg:
+                    break
+
+                self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
+            else:
+                raise TimeoutError("No MISSION_COUNT received after 3 attempts")
 
             count = msg.count
+            self.logger.info(f"Pixhawk reports {count} mission items")
 
-            # 3. Request each item by seq, return raw message as dict
+            # Empty mission is valid
+            if count == 0:
+                return []
+
+            # 2. Request each item by seq, return raw message as dict
             for seq in range(count):
-                while True:
+                for attempt in range(3):
                     self.master.mav.mission_request_int_send(
                         self.master.target_system,
                         self.master.target_component,
@@ -817,7 +826,8 @@ class MAVBridge:
                     )
 
                     if not item:
-                        raise TimeoutError(f"No mission item for seq {seq}")
+                        self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
+                        continue
 
                     if item.seq == seq:
                         mission.append(item.to_dict())
@@ -826,6 +836,8 @@ class MAVBridge:
                     self.logger.debug(
                         f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
                     )
+                else:
+                    raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
 
             return mission
 
@@ -841,27 +853,36 @@ class MAVBridge:
 
             mission = []
 
-            # 1. Request Mission List
-            self.master.mav.mission_request_list_send(
-                self.master.target_system,
-                self.master.target_component
-            )
+            # 1. Request Mission List (with retry)
+            for attempt in range(3):
+                self.master.mav.mission_request_list_send(
+                    self.master.target_system,
+                    self.master.target_component
+                )
 
-            # 2. Warten auf Anzahl
-            msg = self.master.recv_match(
-                type="MISSION_COUNT",
-                blocking=True,
-                timeout=5
-            )
+                msg = self.master.recv_match(
+                    type="MISSION_COUNT",
+                    blocking=True,
+                    timeout=5
+                )
 
-            if not msg:
-                raise TimeoutError("No MISSION_COUNT received")
+                if msg:
+                    break
+
+                self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
+            else:
+                raise TimeoutError("No MISSION_COUNT received after 3 attempts")
 
             count = msg.count
+            self.logger.info(f"Pixhawk reports {count} mission items")
 
-            # 3. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
+            # Empty mission is valid
+            if count == 0:
+                return []
+
+            # 2. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
             for seq in range(count):
-                while True:
+                for attempt in range(3):
                     self.master.mav.mission_request_int_send(
                         self.master.target_system,
                         self.master.target_component,
@@ -875,7 +896,8 @@ class MAVBridge:
                     )
 
                     if not item:
-                        raise TimeoutError(f"No mission item for seq {seq}")
+                        self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
+                        continue
 
                     if item.seq == seq:
                         mission.append(self._parse_mission_item(item, seq=seq))
@@ -885,6 +907,8 @@ class MAVBridge:
                     self.logger.debug(
                         f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
                     )
+                else:
+                    raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
 
             return mission
 
