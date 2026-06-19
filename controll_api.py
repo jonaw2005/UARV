@@ -482,6 +482,7 @@ def translate_mission(json_mission):
 @app.route("/mission_upload", methods=["POST"])
 def upload_mission():
     data = request.get_json(force=True)
+    logging.debug(f"received {data}")
 
     if not data or "mission" not in data:
         return jsonify({"error": "missing mission"}), 400
