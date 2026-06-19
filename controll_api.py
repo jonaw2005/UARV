@@ -506,11 +506,12 @@ def upload_mission():
 def download_mission():
     try:
         future = run_task(bridge.download_mission)
-        mission = future.result()
+        mission = future.result(timeout=30)
         return jsonify({
             "mission": mission
         }), 200
     except Exception as e:
+        logging.error(f"Mission download failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -518,11 +519,12 @@ def download_mission():
 def download_mission_raw():
     try:
         future = run_task(bridge.download_mission_raw)
-        raw = future.result()
+        raw = future.result(timeout=30)
         return jsonify({
             "mission": raw
         }), 200
     except Exception as e:
+        logging.error(f"Mission download raw failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route("/mission_start", methods=["GET"])
