@@ -22,6 +22,39 @@ passed = 0
 failed = 0
 
 
+def test_mission_upload(bridge):
+    print("\n[MISSION UPLOAD]")
+    try:
+        mission = [
+            {"type": "waypoint", "seq": 0, "lat": 47.66, "lon": 9.48},
+            {"type": "action", "seq": 1, "action": "takeoff", "param": "100"},
+            {"type": "action", "seq": 2, "action": "rtl"},
+        ]
+
+        success = bridge.upload_mission(mission)
+
+        check("upload_mission()", success is True)
+    except Exception as e:
+        check("upload_mission()", False, str(e))
+
+
+def test_mission_download(bridge):
+    print("\n[MISSION DOWNLOAD]")
+    try:
+        mission = bridge.download_mission()
+
+        check("download_mission() returns list", isinstance(mission, list))
+
+        if len(mission) > 0:
+            check("first item has 'seq'", "seq" in mission[0])
+            check("first item has 'type'", "type" in mission[0])
+            print(f"  INFO  Downloaded {len(mission)} items")
+        else:
+            print("  INFO  No mission stored")
+    except Exception as e:
+        check("download_mission()", False, str(e))
+
+
 def check(name, condition, detail=""):
     global passed, failed
     if condition:
@@ -32,9 +65,20 @@ def check(name, condition, detail=""):
         failed += 1
 
 
-def main():
-    bridge = MAVBridge(PORT, baud=BAUD)
+def show_menu():
+    print("\nSelect test mode:")
+    print("1 - Test all")
+    print("2 - Test mission upload")
+    print("3 - Test mission download")
+    print("4 - Test mission upload and download")
 
+    while True:
+        choice = input("\nEnter choice (1-4): ").strip()
+        if choice in ("1", "2", "3", "4"):
+            return choice
+        print("Invalid choice.")
+
+def run_all_tests(bridge):
     # ── 1. Connect ──────────────────────────────────────────────────────────
     print("\n[1] connect()")
     try:
@@ -186,6 +230,32 @@ def main():
 
     bridge.running = False
     sys.exit(0 if failed == 0 else 1)
+
+def main():
+    choice = show_menu()
+    bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
+
+    try:
+        bridge.connect()
+        check("connect()", bridge.master is not None)
+    except Exception as e:
+        check("connect()", False, str(e))
+        sys.exit(1)
+
+    time.sleep(1)
+
+    if choice == "1":
+        run_all_tests(bridge)
+
+    elif choice == "2":
+        test_mission_upload(bridge)
+
+    elif choice == "3":
+        test_mission_download(bridge)
+
+    elif choice == "4":
+        test_mission_upload(bridge)
+        test_mission_download(bridge)
 
 
 if __name__ == "__main__":
