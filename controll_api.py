@@ -385,7 +385,7 @@ def translate_mission(json_mission):
                 "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-                "alt": float(item["param"])
+                "param1": float(item["param"])
             })
 
         # ---------------- LOITER ----------------

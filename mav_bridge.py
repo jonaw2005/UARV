@@ -848,7 +848,7 @@ class MAVBridge:
             return {
                 "type": "action",
                 "action": "takeoff",
-                "param": item.z
+                "param": item.param1
             }
 
         # RTL
