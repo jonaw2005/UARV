@@ -280,6 +280,10 @@ body {
   color: #7ec8a3;
 }
 
+.mission-param {
+  color: #f0c674;
+}
+
 .panel-overlay {
   position: absolute;
   inset: 0;

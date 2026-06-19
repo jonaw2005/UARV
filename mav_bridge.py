@@ -124,14 +124,9 @@ class MAVBridge:
         self.logger.debug(f"_arm_disarm_sync")
         self.command_long_send(
             mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-            0,  # confirmation
-            1 if arm else 0,  # param1: 1=arm, 0=disarm
-            21196 if force else 0,  # param2: force flag
-            0,
-            0,
-            0,
-            0,
-            0
+            param1=1 if arm else 0,  # 1=arm, 0=disarm
+            param2=21196 if force else 0,  # force flag
+            confirmation=0
         )
 
         start = time.time()
