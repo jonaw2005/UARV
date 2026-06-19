@@ -52,6 +52,7 @@ class MAVBridge:
         with self._master_lock:
             self.logger.debug(f"trying to find message {msg_type}")
             msg = self.master.recv_match(blocking=True, timeout=timeout)
+            self.logger.debug(f"found message {msg.get_type()}")
             self._latest.value = msg
             if msg and msg.get_type() in msg_type:
                 return msg
