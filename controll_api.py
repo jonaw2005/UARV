@@ -42,9 +42,9 @@ def handle_connect():
     start_background()
 
 # Initialize a single shared MAVBridge instance and execution pool
-bridge = MAVBridge("/dev/ttyAMA0", baud=9600)
+bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
 bridge.connect()
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=1)
 
 # Simple in-memory state
 state = {

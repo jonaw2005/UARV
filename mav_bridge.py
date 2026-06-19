@@ -39,8 +39,8 @@ class MAVBridge:
             'last_heartbeat': None,
             'system_status': None,
         }
-        self.connect()
-        self._health_thread = None#threading.Thread(target=self._health_loop, daemon=True)
+        #self.connect()
+        #self._health_thread = None#threading.Thread(target=self._health_loop, daemon=True)
         #self._health_thread.start()
 
     def _read2(self, msg_type=None, timeout=10.0):
