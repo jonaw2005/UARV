@@ -757,8 +757,9 @@ class MAVBridge:
 
 
     def download_mission_test(self):
-        """Quick test: request mission list and return MISSION_COUNT as dict."""
-        mission = None
+        """Quick test: request mission list, download all items, return parsed mission."""
+        # ── Step 1: Get MISSION_COUNT ─────────────────────────────────────
+        count_msg = None
         for attempt in range(5):
             self.logger.debug(f"[download_mission_test] Sending MISSION_REQUEST_LIST (attempt {attempt + 1})")
             self.master.mav.mission_request_list_send(
@@ -767,15 +768,70 @@ class MAVBridge:
                 mu.mavlink.MAV_MISSION_TYPE_MISSION
             )
 
-            mission = self._read(msg_type="MISSION_COUNT", timeout=3)
-            if mission:
-                self.logger.info(f"[download_mission_test] Got MISSION_COUNT on attempt {attempt + 1}: {mission.count} items")
-                return mission.to_dict()
-
+            count_msg = self._read(msg_type="MISSION_COUNT", timeout=3)
+            if count_msg:
+                self.logger.info(f"[download_mission_test] Got MISSION_COUNT on attempt {attempt + 1}: {count_msg.count} items")
+                break
             self.logger.warning(f"[download_mission_test] No MISSION_COUNT on attempt {attempt + 1}, retrying...")
+        else:
+            self.logger.error("[download_mission_test] FAILED: No MISSION_COUNT after 5 attempts")
+            raise TimeoutError("No mission data received")
 
-        self.logger.error("[download_mission_test] FAILED: No MISSION_COUNT after 5 attempts")
-        raise TimeoutError("No mission data received")
+        count = count_msg.count
+
+        # Empty mission is valid
+        if count == 0:
+            self.logger.info("[download_mission_test] Empty mission (count=0)")
+            return {"count": 0, "mission": []}
+
+        # ── Step 2: Wait for Pixhawk to load mission from flash ────────────
+        self.logger.debug("[download_mission_test] Waiting 5s for Pixhawk to prepare items...")
+        time.sleep(5.0)
+
+        # ── Step 3: Download each item ────────────────────────────────────
+        mission_items = []
+        for seq in range(count):
+            item = None
+            for attempt in range(5):
+                if attempt < 3:
+                    self.master.mav.mission_request_int_send(
+                        self.target_system, self.target_component, seq,
+                        mu.mavlink.MAV_MISSION_TYPE_MISSION
+                    )
+                else:
+                    self.master.mav.mission_request_send(
+                        self.target_system, self.target_component, seq
+                    )
+
+                deadline = time.time() + 10
+                while time.time() < deadline:
+                    msg = self._read(
+                        msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
+                        timeout=1
+                    )
+                    if not msg:
+                        continue
+                    if msg.get_type() in ("MISSION_ITEM_INT", "MISSION_ITEM"):
+                        item = msg
+                        break
+
+                if item and item.seq == seq:
+                    self.logger.info(f"[download_mission_test] Got item seq={seq}")
+                    mission_items.append(self._parse_mission_item(item, seq=seq))
+                    break
+
+                if item and item.seq != seq:
+                    self.logger.warning(f"[download_mission_test] Wrong seq: expected {seq}, got {item.seq}, re-requesting...")
+                    time.sleep(0.5)
+                    continue
+
+                self.logger.warning(f"[download_mission_test] No item for seq {seq} (attempt {attempt + 1}/5)")
+                time.sleep(0.5)
+            else:
+                raise TimeoutError(f"No mission item for seq {seq}")
+
+        self.logger.info(f"[download_mission_test] Downloaded {len(mission_items)}/{count} items")
+        return {"count": count, "mission": mission_items}
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
     # --------------------------------------------------
