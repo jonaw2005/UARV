@@ -1,5 +1,5 @@
-#import eventlet
-#eventlet.monkey_patch()
+import eventlet
+eventlet.monkey_patch()
 
 from flask import Flask, Response, jsonify, request
 import threading
@@ -44,7 +44,7 @@ def handle_connect():
 # Initialize a single shared MAVBridge instance and execution pool
 bridge = MAVBridge("/dev/ttyAMA0", baud=9600)
 bridge.connect()
-executor = ThreadPoolExecutor(max_workers=1)
+executor = ThreadPoolExecutor(max_workers=2)
 
 # Simple in-memory state
 state = {
