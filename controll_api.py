@@ -460,6 +460,9 @@ def translate_mission(json_mission):
 
     # sort by seq (important) — ensures correct order regardless of input order
     items.sort(key=lambda x: x["seq"])
+    # Reassign seq to array index so it always matches the position
+    for i, item in enumerate(items):
+        item["seq"] = i
     logging.info(f"Translated {len(items)} mission items")
     return items
 

@@ -398,20 +398,19 @@ function exportMissionToJSON() {
     mission: []
   };
 
-  let waypointSeq = 1;
   missionItems.forEach((item, index) => {
+    const seq = index;  // 0-based seq — matches MAVLink MISSION_REQUEST seq
     if (item.type === 'waypoint') {
       missionJSON.mission.push({
         type: 'waypoint',
-        seq: waypointSeq,
+        seq: seq,
         lat: item.lat,
         lon: item.lon
       });
-      waypointSeq++;
     } else if (item.type === 'action') {
       const entry = {
         type: 'action',
-        seq: index + 1,
+        seq: seq,
         action: item.action
       };
       // Only include param if the action has one (not rtl, land, or land_start)
