@@ -97,10 +97,10 @@ class MAVBridge:
     def _write(self, msg, log: bool = True):
         """Single threaded mav.send wrapper."""
         self.logger.debug(f"_write")
+        self.master.wait_heartbeat()
+        if log:
+            self.logger.debug(f"Sending message: {msg}")
         with self._master_lock:
-            self.master.wait_heartbeat()
-            if log:
-                self.logger.debug(f"Sending message: {msg}")
             self.master.mav.send(msg)
 
     def connect(self, timeout=30):
