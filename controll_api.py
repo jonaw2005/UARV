@@ -484,10 +484,17 @@ def upload_mission():
     data = request.get_json(force=True)
     logging.debug(f"received {data}")
 
+    '''
     if not data or "mission" not in data:
         return jsonify({"error": "missing mission"}), 400
 
     mission_json = sorted(data["mission"], key=lambda x: int(x["seq"]))
+    '''
+
+    if not data:
+        return jsonify({"error": "missing mission"}), 400
+
+    mission_json = sorted(data, key=lambda x: int(x["seq"]))
 
     #mav_items = translate_mission(mission_json)
     mav_items = mission_json
