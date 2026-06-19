@@ -172,7 +172,6 @@ function setupActionButtons() {
   buttons[0].disabled = false;
   buttons[0].id = 'armDisarmBtn';
   buttons[0].addEventListener('click', arm_disarm);
-  startArmStatusPoll();
 
   // Mode Selection
   buttons[1].disabled = false;
