@@ -12,7 +12,7 @@ import atexit
 import logging
 from pymavlink import mavutil
 
-from mav_bridge import MAVBridge
+from mav_bridge_backup import MAVBridge
 
 
 app = Flask(__name__)
