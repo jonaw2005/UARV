@@ -65,6 +65,7 @@ class MAVBridge:
         """Single threaded mav.send wrapper."""
         self.logger.debug(f"_write")
         with self._master_lock:
+            self.master.wait_heartbeat()
             if log:
                 self.logger.debug(f"Sending message: {msg}")
             self.master.mav.send(msg)
