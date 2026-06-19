@@ -741,9 +741,10 @@ class MAVBridge:
             if not ack:
                 raise TimeoutError("No MISSION_ACK received after upload")
 
-            if ack.result != mu.mavlink.MAV_RESULT_ACCEPTED:
+            ack_result = getattr(ack, 'result', None)
+            if ack_result is not None and ack_result != mu.mavlink.MAV_RESULT_ACCEPTED:
                 raise RuntimeError(
-                    f"MISSION_ACK not accepted: result={ack.result}, type={ack.type}"
+                    f"MISSION_ACK not accepted: result={ack_result}, type={ack.type}"
                 )
 
             self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}, type={ack.type}")

@@ -255,7 +255,20 @@ function showMissionWindow(missionData) {
         }
       }
 
-      const displayName = action ? action.replace(/_/g, ' ') : type;
+      const actionLabels = {
+        takeoff: 'Takeoff',
+        land: 'Land',
+        rtl: 'Return to Launch',
+        loiter: 'Loiter (Time)',
+        set_speed: 'Set Speed',
+        change_alt: 'Change Altitude',
+        delay: 'Delay',
+        condition_yaw: 'Condition Yaw',
+        land_start: 'Land Start',
+      };
+      const displayName = type === 'action'
+        ? (actionLabels[action] || action.replace(/_/g, ' '))
+        : type;
 
       // Location line
       let locationStr = '';
