@@ -876,11 +876,14 @@ class MAVBridge:
         mission_items = []
 
         self.logger.info("Requesting mission list...")
-        self.master.mav.mission_request_list_send(
+
+        mission_request_list_message = mu.mavlink.MAVLink_mission_request_list_message(
             self.target_system,
             self.target_component,
             mu.mavlink.MAV_MISSION_TYPE_MISSION
         )
+
+        self._write(mission_request_list_message)
 
         msg = self._read("MISSION_COUNT", timeout=timeout)
         if not msg:
@@ -895,12 +898,15 @@ class MAVBridge:
             return []
 
         for seq in range(num_items):
-            self.master.mav.mission_request_int_send(
+            mission_request_int_message = mu.mavlink.MAVLink_mission_request_int_message(
                 self.target_system,
                 self.target_component,
                 seq,
                 mu.mavlink.MAV_MISSION_TYPE_MISSION
             )
+
+            self._write(mission_request_int_message)
+
             item_msg = self._read(["MISSION_ITEM_INT", "MISSION_ITEM"], timeout=timeout)
 
             if not item_msg or item_msg.seq != seq:
