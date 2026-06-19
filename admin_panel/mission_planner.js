@@ -388,6 +388,92 @@ clearWaypointsBtn.addEventListener('click', () => {
   refreshMissionList();
 });
 
+function missionToMAVLink(missionJson) {
+    const MAV_CMD = {
+        waypoint: 16,          // NAV_WAYPOINT
+        takeoff: 22,           // NAV_TAKEOFF
+        loiter: 19,            // NAV_LOITER_TIME
+        rtl: 20,               // NAV_RETURN_TO_LAUNCH
+        land: 21,              // NAV_LAND
+        delay: 93,             // NAV_DELAY
+        set_speed: 178,        // DO_CHANGE_SPEED
+        condition_yaw: 115,    // CONDITION_YAW
+        land_start: 21         // treat as land
+    };
+
+    const frame = 6; // MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+
+    return missionJson.mission.map((item, index) => {
+
+        let cmd = MAV_CMD[item.action] || 16;
+
+        let missionItem = {
+            seq: item.seq ?? index,
+            frame: frame,
+            command: cmd,
+
+            current: 0,
+            autocontinue: 1,
+
+            param1: 0,
+            param2: 0,
+            param3: 0,
+            param4: 0,
+
+            x: 0,
+            y: 0,
+            z: 0
+        };
+
+        switch (item.type) {
+
+            case "waypoint":
+                missionItem.x = Math.floor(item.lat * 1e7);
+                missionItem.y = Math.floor(item.lon * 1e7);
+                missionItem.z = 20; // default altitude or extend schema
+                break;
+
+            case "action":
+                switch (item.action) {
+
+                    case "takeoff":
+                        missionItem.param7 = parseFloat(item.param || 10);
+                        break;
+
+                    case "loiter":
+                        missionItem.param1 = parseFloat(item.param || 60);
+                        break;
+
+                    case "delay":
+                        missionItem.param1 = parseFloat(item.param || 0);
+                        break;
+
+                    case "set_speed":
+                        missionItem.param1 = 1; // ground speed
+                        missionItem.param2 = parseFloat(item.param || 5);
+                        break;
+
+                    case "condition_yaw":
+                        missionItem.param1 = parseFloat(item.param || 0);
+                        missionItem.param2 = 0;
+                        missionItem.param3 = 1; // direction
+                        missionItem.param4 = 0;
+                        break;
+
+                    case "rtl":
+                    case "land":
+                    case "land_start":
+                        // no params needed
+                        break;
+                }
+                break;
+        }
+
+        return missionItem;
+    });
+}
+
+
 function exportMissionToJSON() {
   const missionJSON = {
     mission: []
@@ -420,7 +506,7 @@ function exportMissionToJSON() {
 }
 
 uploadMissionBtn.addEventListener('click', async () => {
-  const missionJSON = exportMissionToJSON();
+  const missionJSON = missionToMAVLink(exportMissionToJSON());
   console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
   try {
     const response = await fetch('http://192.168.0.105/api/mission_upload', {

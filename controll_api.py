@@ -488,7 +488,8 @@ def upload_mission():
 
     mission_json = sorted(data["mission"], key=lambda x: int(x["seq"]))
 
-    mav_items = translate_mission(mission_json)
+    #mav_items = translate_mission(mission_json)
+    mav_items = mission_json
     logging.info("Translated MAVLink items: %s", mav_items)
     #logging.warning("Translated MAVLink items: %s", mav_items)
     try:
