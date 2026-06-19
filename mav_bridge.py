@@ -40,8 +40,8 @@ class MAVBridge:
             'system_status': None,
         }
         self.connect()
-        self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
-        self._health_thread.start()
+        self._health_thread = None#threading.Thread(target=self._health_loop, daemon=True)
+        #self._health_thread.start()
 
     def _read2(self, msg_type=None, timeout=10.0):
         """Single threaded recv_match wrapper.
