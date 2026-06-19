@@ -709,6 +709,7 @@ class MAVBridge:
                     continue
 
                 seq = msg.seq
+                self.logger.info(f"Received request for seq {seq}/{count}")
 
                 # If the autopilot requests an item we already sent, skip stale
                 if seq < uploaded:
