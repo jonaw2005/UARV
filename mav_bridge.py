@@ -729,11 +729,17 @@ class MAVBridge:
 
             ack = self.master.recv_match(
                 type="MISSION_ACK",
-                blocking=True
+                blocking=True,
+                timeout=5
             )
 
             if not ack:
                 raise TimeoutError("No MISSION_ACK received after upload")
+
+            if ack.result != mu.mavlink.MAV_RESULT_ACCEPTED:
+                raise RuntimeError(
+                    f"MISSION_ACK not accepted: result={ack.result}, type={ack.type}"
+                )
 
             self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}, type={ack.type}")
             return str(ack)
@@ -867,7 +873,7 @@ class MAVBridge:
                         raise TimeoutError(f"No mission item for seq {seq}")
 
                     if item.seq == seq:
-                        mission.append(self._parse_mission_item(item))
+                        mission.append(self._parse_mission_item(item, seq=seq))
                         break
 
                     # Stale or out-of-order message — discard and re-request
@@ -880,7 +886,7 @@ class MAVBridge:
     # --------------------------------------------------
     # INTERNAL: MAVLink → JSON
     # --------------------------------------------------
-    def _parse_mission_item(self, item):
+    def _parse_mission_item(self, item, seq=None):
 
         cmd = item.command
         msg_type = item.get_type()
@@ -895,6 +901,7 @@ class MAVBridge:
                 lat = item.lat
                 lon = item.lon
             return {
+                "seq": seq,
                 "type": "waypoint",
                 "lat": lat,
                 "lon": lon,
@@ -904,6 +911,7 @@ class MAVBridge:
         # TAKEOFF
         elif cmd == mu.mavlink.MAV_CMD_NAV_TAKEOFF:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "takeoff",
                 "param": item.param1
@@ -912,6 +920,7 @@ class MAVBridge:
         # RTL
         elif cmd == mu.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "rtl"
             }
@@ -919,6 +928,7 @@ class MAVBridge:
         # LAND
         elif cmd == mu.mavlink.MAV_CMD_NAV_LAND:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "land"
             }
@@ -926,6 +936,7 @@ class MAVBridge:
         # LOITER TIME
         elif cmd == mu.mavlink.MAV_CMD_NAV_LOITER_TIME:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "loiter",
                 "param": item.param1
@@ -934,6 +945,7 @@ class MAVBridge:
         # SPEED
         elif cmd == mu.mavlink.MAV_CMD_DO_CHANGE_SPEED:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "set_speed",
                 "param": item.param2
@@ -942,6 +954,7 @@ class MAVBridge:
         # ALT CHANGE
         elif cmd == mu.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "change_alt",
                 "param": item.param1
@@ -950,6 +963,7 @@ class MAVBridge:
         # DELAY
         elif cmd == mu.mavlink.MAV_CMD_NAV_DELAY:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "delay",
                 "param": item.param1
@@ -958,6 +972,7 @@ class MAVBridge:
         # YAW
         elif cmd == mu.mavlink.MAV_CMD_CONDITION_YAW:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "condition_yaw",
                 "param": item.param1
@@ -966,12 +981,14 @@ class MAVBridge:
         # LAND START
         elif cmd == mu.mavlink.MAV_CMD_DO_LAND_START:
             return {
+                "seq": seq,
                 "type": "action",
                 "action": "land_start"
             }
 
         # UNKNOWN
         return {
+            "seq": seq,
             "type": "unknown",
             "command": cmd
         }

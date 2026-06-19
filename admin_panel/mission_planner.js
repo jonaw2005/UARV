@@ -433,15 +433,92 @@ uploadMissionBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(missionJSON),
     });
+    const result = await response.json();
     if (response.ok) {
       alert(`Mission uploaded successfully with ${missionItems.length} item(s).`);
     } else {
-      alert(`Upload failed with status ${response.status}.`);
+      alert(`Upload failed: ${result.error || response.status}`);
     }
   } catch (error) {
     alert(`Upload failed: ${error.message}`);
   }
 });
+
+
+function loadMissionFromJSON(missionData) {
+  // Clear existing mission
+  missionItems.forEach((item) => {
+    if (item.missionMarker) {
+      plannerMap.removeLayer(item.missionMarker);
+    }
+  });
+  if (missionPolyline) {
+    plannerMap.removeLayer(missionPolyline);
+    missionPolyline = null;
+  }
+  waypoints.length = 0;
+  missionItems.length = 0;
+
+  // Load items from downloaded mission
+  const actionTitleMap = {
+    takeoff: (p) => `Takeoff to ${p || 'auto'} m`,
+    loiter: (p) => `Loiter for ${p || '0'} s`,
+    rtl: () => 'Return to Launch',
+    land: () => 'Land',
+    change_alt: (p) => `Change altitude to ${p || 'auto'} m`,
+    delay: (p) => `Delay ${p || '0'} s`,
+    set_speed: (p) => `Set speed to ${p || '0'} m/s`,
+    condition_yaw: (p) => `Condition yaw to ${p || '0'}°`,
+    land_start: () => 'Land Start',
+  };
+
+  missionData.forEach((item) => {
+    if (item.type === 'waypoint') {
+      const wp = { lat: item.lat, lon: item.lon };
+      waypoints.push(wp);
+      missionItems.push({
+        type: 'waypoint',
+        title: `Waypoint ${missionItems.filter(i => i.type === 'waypoint').length + 1}: ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}`,
+        lat: item.lat,
+        lon: item.lon,
+      });
+    } else if (item.type === 'action') {
+      const param = item.param || '';
+      const titleFn = actionTitleMap[item.action] || (() => 'Action');
+      missionItems.push({
+        type: 'action',
+        title: titleFn(param),
+        action: item.action,
+        param: param,
+        lat: item.lat || 0,
+        lon: item.lon || 0,
+      });
+    }
+  });
+
+  refreshWaypointList();
+  refreshMissionList();
+}
+
+
+async function downloadMission() {
+  try {
+    const response = await fetch('http://192.168.0.105/api/mission_download');
+    if (!response.ok) {
+      alert(`Download failed with status ${response.status}`);
+      return;
+    }
+    const result = await response.json();
+    if (result.mission && result.mission.length > 0) {
+      loadMissionFromJSON(result.mission);
+      alert(`Mission downloaded: ${result.mission.length} item(s).`);
+    } else {
+      alert('No mission items on Pixhawk.');
+    }
+  } catch (error) {
+    alert(`Download failed: ${error.message}`);
+  }
+}
 
 refreshWaypointList();
 refreshMissionList();

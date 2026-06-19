@@ -376,23 +376,28 @@ def translate_mission(json_mission):
                 "command": mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
                 "lat": int(item["lat"] * 1e7),
                 "lon": int(item["lon"] * 1e7),
-                "alt": 50
+                "alt": 50.0
             })
 
         # ---------------- TAKEOFF ----------------
         elif t == "action" and item["action"] == "takeoff":
+            # ArduPlane NAV_TAKEOFF expects position in lat/lon/alt fields;
+            # param1 is minimum pitch (not altitude). Altitude goes in 'alt'.
             items.append({
                 "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                "lat": 0,
+                "lon": 0,
                 "alt": float(item["param"])
             })
 
         # ---------------- LOITER ----------------
         elif t == "action" and item["action"] == "loiter":
+            # LOITER_TIME is location-dependent → use GLOBAL_RELATIVE_ALT frame
             items.append({
                 "seq": seq,
-                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
                 "param1": float(item["param"])
             })
@@ -415,6 +420,7 @@ def translate_mission(json_mission):
 
         # ---------------- SPEED ----------------
         elif t == "action" and item["action"] == "set_speed":
+            # param1=0 (ground speed), param2=speed value
             items.append({
                 "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
@@ -425,9 +431,10 @@ def translate_mission(json_mission):
 
         # ---------------- ALT CHANGE ----------------
         elif t == "action" and item["action"] == "change_alt":
+            # DO_CHANGE_ALTITUDE: use GLOBAL_RELATIVE_ALT, alt goes in param1
             items.append({
                 "seq": seq,
-                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE,
                 "param1": float(item["param"])
             })
@@ -436,7 +443,7 @@ def translate_mission(json_mission):
         elif t == "action" and item["action"] == "delay":
             items.append({
                 "seq": seq,
-                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_DELAY,
                 "param1": float(item["param"])
             })
@@ -445,7 +452,7 @@ def translate_mission(json_mission):
         elif t == "action" and item["action"] == "condition_yaw":
             items.append({
                 "seq": seq,
-                "frame": mavutil.mavlink.MAV_FRAME_MISSION,
+                "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_CONDITION_YAW,
                 "param1": float(item["param"])
             })
@@ -481,31 +488,30 @@ def upload_mission():
 
     mav_items = translate_mission(mission_json)
     logging.info("Translated MAVLink items: %s", mav_items)
-    run_task(bridge.upload_mission, mav_items)
-#    try:
-#        future = run_task(bridge.upload_mission, mav_items)
-#        response = future.result(timeout=15)
-#        return jsonify(response), 200
-#    except Exception as e:
-#        return jsonify({'error': str(e)}), 500
-    task_id = 0
-    logging.info(mav_items)
 
-    return jsonify({
-        "status": "upload_started",
-        "task_id": task_id,
-        "items": len(mav_items)
-    })
+    try:
+        future = run_task(bridge.upload_mission, mav_items)
+        response = future.result(timeout=30)
+        return jsonify({
+            "status": "upload_complete",
+            "result": response,
+            "items": len(mav_items)
+        }), 200
+    except Exception as e:
+        logging.error(f"Mission upload failed: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/mission_download", methods=["GET"])
 def download_mission():
-
-    future = run_task(bridge.download_mission)
-    mission = future.result()
-    return jsonify({
-        "mission": mission
-    }), 202
+    try:
+        future = run_task(bridge.download_mission)
+        mission = future.result()
+        return jsonify({
+            "mission": mission
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/mission_download_raw", methods=["GET"])
