@@ -83,7 +83,7 @@ class MAVBridge:
 
 
 # done
-    def send_command_long_send(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
+    def command_long_send(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
         self.logger.debug(f"send_command_long")
 
         command_long_message = mu.mavlink.MAVLink_command_long_message(
@@ -115,7 +115,7 @@ class MAVBridge:
             True if the command was accepted, False otherwise.
         """
         self.logger.debug(f"_arm_disarm_sync")
-        self.send_command_long(
+        self.command_long_send(
             mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
             0,  # confirmation
             1 if arm else 0,  # param1: 1=arm, 0=disarm
