@@ -116,8 +116,8 @@ class MAVBridge:
         # mark connected and start background health thread
         self.health['connected'] = True
         self.running = True
-        #self.target_system = self.master.target_system
-        #self.target_component = self.master.target_component
+        self.target_system = self.master.target_system
+        self.target_component = self.master.target_component
         #self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
         #self._health_thread.start()
 
@@ -127,8 +127,8 @@ class MAVBridge:
         self.logger.debug(f"send_command_long")
 
         command_long_message = mu.mavlink.MAVLink_command_long_message(
-            1,
-            1,
+            self.target_system,
+            self.target_component,
             command,
             confirmation,
             param1,
