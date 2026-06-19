@@ -40,7 +40,7 @@ def handle_connect():
     start_background()
 
 # Initialize a single shared MAVBridge instance and execution pool
-bridge = MAVBridge("/dev/ttyACM0", baud=57600)
+bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
 bridge.connect()
 executor = ThreadPoolExecutor(max_workers=1)
 
