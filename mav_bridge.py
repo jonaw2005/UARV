@@ -17,6 +17,7 @@ class MAVBridge:
 
         connection_string: e.g. 'udp:127.0.0.1:14550' or 'COM3' or '/dev/ttyUSB0'
         """
+        self.logger.debug(f"__init__")
         self.connection_string = connection_string
         self.baud = baud
         self.master = None
@@ -47,6 +48,7 @@ class MAVBridge:
         Acquires _master_lock, calls recv_match, caches result in thread-local
         self._latest, releases lock, and returns the message.
         """
+        self.logger.debug(f"_read")
         with self._master_lock:
             self.logger.debug(f"trying to find message {msg_type}")
             msg = self.master.recv_match(blocking=True, timeout=timeout)
@@ -56,12 +58,14 @@ class MAVBridge:
         
     def _write(self, msg, log: bool = True):
         """Single threaded mav.send wrapper."""
+        self.logger.debug(f"_write")
         with self._master_lock:
             if log:
                 self.logger.debug(f"Sending message: {msg}")
             self.master.mav.send(msg)
 
     def connect(self, timeout=30):
+        self.logger.debug(f"connect")
         self.master = mu.mavlink_connection(
             self.connection_string,
             baud=self.baud,
@@ -76,6 +80,7 @@ class MAVBridge:
 
 
     def send_command_long(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
+        self.logger.debug(f"send_command_long")
         pass
 
 
@@ -91,6 +96,7 @@ class MAVBridge:
         Returns:
             True if the command was accepted, False otherwise.
         """
+        self.logger.debug(f"_arm_disarm_sync")
         self.master.mav.command_long_send(
             self.target_system,
             self.target_component,
@@ -117,6 +123,7 @@ class MAVBridge:
 
         Returns True if armed successfully.
         """
+        self.logger.debug(f"arm")
         return self._arm_disarm_sync(arm=True, force=force, timeout=timeout)
 
     def disarm(self, force: bool = False, timeout: float = 5.0) -> bool:
@@ -125,11 +132,13 @@ class MAVBridge:
 
         Returns True if disarmed successfully.
         """
+        self.logger.debug(f"disarm")
         return self._arm_disarm_sync(arm=False, force=force, timeout=timeout)
 
 
     def is_armed(self, timeout=3):
         """Return True if the vehicle is armed, False if disarmed."""
+        self.logger.debug(f"is_armed")
         msg = self._read(msg_type='HEARTBEAT', timeout=timeout)
         if not msg:
             return False
@@ -144,6 +153,7 @@ class MAVBridge:
             lat, lon in degrees
             alt in meters (relative or absolute depending on frame)
             """
+            self.logger.debug(f"goto")
 
             self.master.mav.set_position_target_global_int_send(
                 0,  # time_boot_ms
@@ -167,6 +177,7 @@ class MAVBridge:
 
 
     def get_all_params(self):
+        self.logger.debug(f"get_all_params")
 
         self.logger.info("Requesting parameter list...")
 
@@ -215,6 +226,7 @@ class MAVBridge:
 
 
     def get_param(self, name):
+        self.logger.debug(f"get_param")
         self.master.mav.param_request_read_send(
             self.master.target_system,
             self.master.target_component,
@@ -237,6 +249,7 @@ class MAVBridge:
 
     def get_telemetry(self, timeout=5):
         """Request current telemetry and return a JSON-friendly dict."""
+        self.logger.debug(f"get_telemetry")
         try:
             self.master.mav.request_data_stream_send(
                 self.master.target_system,
@@ -308,6 +321,7 @@ class MAVBridge:
         return telemetry
 
     def get_gps_status(self, timeout=5):
+        self.logger.debug(f"get_gps_status")
         try:
             self.master.mav.request_data_stream_send(
                 self.master.target_system,
@@ -339,6 +353,7 @@ class MAVBridge:
         return gps_status
 
     def get_gps_raw(self, timeout=5, hz: int = 5):
+        self.logger.debug(f"get_gps_raw")
         interval_us = int(1e6 / hz)
         try:
             self.master.mav.command_long_send(
@@ -381,6 +396,7 @@ class MAVBridge:
         return gps_raw
 
     def get_gps_int(self, timeout=5, hz: int=5):
+        self.logger.debug(f"get_gps_int")
         interval_us = int(1e6 / hz)
         try:
             self.master.mav.command_long_send(
@@ -426,6 +442,7 @@ class MAVBridge:
 
     def _health_loop(self):
         # continuously collect a small set of status messages into self.health
+        self.logger.debug(f"_health_loop")
         while self.running:
             try:
                 try:
@@ -467,6 +484,7 @@ class MAVBridge:
 
     def get_health(self):
         # return a shallow copy of health dictionary
+        self.logger.debug(f"get_health")
         return dict(self.health)
 
     def battery_level(self, timeout=3):
@@ -480,6 +498,7 @@ class MAVBridge:
 
         Returns None fields if data not received within timeout.
         """
+        self.logger.debug(f"battery_level")
         try:
             self.master.mav.request_data_stream_send(
                 self.master.target_system,
@@ -510,6 +529,7 @@ class MAVBridge:
         }
 
     def get_location(self):
+        self.logger.debug(f"get_location")
         telemetry = self.get_telemetry()
         return {
             'lat': telemetry.get('lat'),
@@ -529,6 +549,7 @@ class MAVBridge:
         vy: East (+)
         vz: Down (+)
         """
+        self.logger.debug(f"set_velocity")
 
         type_mask = 0b0000111111000111
 
@@ -548,6 +569,7 @@ class MAVBridge:
     # TAKEOFF (GUIDED MODE)
     # -----------------------------
     def takeoff(self, altitude):
+        self.logger.debug(f"takeoff")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -562,6 +584,7 @@ class MAVBridge:
     # RTL
     # -----------------------------
     def rtl(self):
+        self.logger.debug(f"rtl")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -574,6 +597,7 @@ class MAVBridge:
     # LAND
     # -----------------------------
     def land(self):
+        self.logger.debug(f"land")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -586,6 +610,7 @@ class MAVBridge:
     # CHANGE SPEED
     # -----------------------------
     def set_speed(self, speed, airspeed=True):
+        self.logger.debug(f"set_speed")
         speed_type = 0 if airspeed else 1
 
         self.master.mav.command_long_send(
@@ -603,6 +628,7 @@ class MAVBridge:
     # CONDITION YAW
     # -----------------------------
     def condition_yaw(self, heading, relative=False, speed=0, direction=0):
+        self.logger.debug(f"condition_yaw")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -619,6 +645,7 @@ class MAVBridge:
     # LOITER TIME (guided trigger)
     # -----------------------------
     def loiter_time(self, seconds):
+        self.logger.debug(f"loiter_time")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -637,6 +664,7 @@ class MAVBridge:
     # CHANGE ALTITUDE (guided)
     # -----------------------------
     def change_altitude(self, altitude):
+        self.logger.debug(f"change_altitude")
         self.master.mav.command_long_send(
             self.master.target_system,
             self.master.target_component,
@@ -650,6 +678,7 @@ class MAVBridge:
     # SET MODE (optional but useful)
     # -----------------------------
     def set_mode(self, mode):
+        self.logger.debug(f"set_mode")
         mode_mapping = self.master.mode_mapping()
 
         if mode not in mode_mapping:
@@ -669,6 +698,7 @@ class MAVBridge:
     # --------------------------------------------------
 
     def upload_mission_test(self, mission_items):
+        self.logger.debug(f"upload_mission_test")
         num_items = len(mission_items)
         self.logger.info(f"Uploading mission with {num_items} items.")
 
@@ -768,6 +798,7 @@ class MAVBridge:
         """
         mission_items = already translated MAVLink-ready list
         """
+        self.logger.debug(f"upload_mission")
         with self._master_lock:
 
             self.master.mav.mission_clear_all_send(
@@ -847,6 +878,7 @@ class MAVBridge:
     # INTERNAL: send single item
     # --------------------------------------------------
     def _send_mission_item(self, seq, item):
+        self.logger.debug(f"_send_mission_item")
 
         self.master.mav.mission_item_int_send(
             self.master.target_system,
@@ -871,6 +903,7 @@ class MAVBridge:
 
     def download_mission_test_2(self, timeout=10):
         """Downloads the mission from the Pixhawk and returns a list of items."""
+        self.logger.debug(f"download_mission_test_2")
         if not self.master:
             self.logger.error("Not connected to Pixhawk. Call connect() first.")
             return None
@@ -937,6 +970,7 @@ class MAVBridge:
 
     def download_mission_test(self):
         """Quick test: request mission list, download all items, return parsed mission."""
+        self.logger.debug(f"download_mission_test")
         # ── Step 1: Get MISSION_COUNT ─────────────────────────────────────
         count_msg = None
         for attempt in range(5):
@@ -1019,6 +1053,7 @@ class MAVBridge:
         Download mission and return raw MAVLink message dicts
         (no translation / parsing — original MAVLink field names).
         """
+        self.logger.debug(f"download_mission_raw")
         with self._master_lock:
             mission = []
 
@@ -1122,6 +1157,7 @@ class MAVBridge:
         Holt komplette Mission vom Pixhawk (ArduPlane)
         und gibt sie als strukturierte Liste zurück
         """
+        self.logger.debug(f"download_mission_2")
         with self._master_lock:
             mission = []
 
@@ -1223,6 +1259,7 @@ class MAVBridge:
         Directly reads from MAVLink stream (NO cache, NO _get, NO shared state).
         Must be the only recv_match consumer while running.
         """
+        self.logger.debug(f"download_mission")
         self.logger.info(f"[download_mission] START target_system={self.target_system} target_component={self.target_component} timeout={timeout}s")
 
         with self._master_lock:
@@ -1359,6 +1396,7 @@ class MAVBridge:
     # INTERNAL: MAVLink → JSON
     # --------------------------------------------------
     def _parse_mission_item(self, item, seq=None):
+        self.logger.debug(f"_parse_mission_item")
 
         cmd = item.command
         msg_type = item.get_type()
@@ -1467,6 +1505,7 @@ class MAVBridge:
 
 
     def change_mode(self, mode):
+        self.logger.debug(f"change_mode")
         mode_mapping = self.master.mode_mapping()
 
         if mode not in mode_mapping:
@@ -1481,16 +1520,19 @@ class MAVBridge:
         )
 
     def abort_mission(self):
+        self.logger.debug(f"abort_mission")
         # example: disarm and set mode to MANUAL
         self.disarm()
         time.sleep(0.5)
         self.change_mode("MANUAL")
 
     def start_mission(self):
+        self.logger.debug(f"start_mission")
         # example: set mode to AUTO
         self.change_mode("AUTO")
 
     def get_mode(self):
+        self.logger.debug(f"get_mode")
         self.master.mav.request_data_stream_send(
             self.master.target_system,
             self.master.target_component,
@@ -1513,6 +1555,7 @@ class MAVBridge:
 
 
     def start_rc_override(self):
+        self.logger.debug(f"start_rc_override")
         while True:
             self.master.mav.rc_channels_override_send(
                 self.master.target_system,
