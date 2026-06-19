@@ -54,7 +54,7 @@ class MAVBridge:
             msg = self.master.recv_match(blocking=True, timeout=timeout)
             self.logger.debug(f"found message {msg.get_type()}")
             self._latest.value = msg
-            if msg and msg.get_type() in msg_type:
+            if msg and (msg.get_type() in msg_type):
                 return msg
         
     def _write(self, msg, log: bool = True):
