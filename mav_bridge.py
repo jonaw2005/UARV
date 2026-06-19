@@ -92,7 +92,7 @@ class MAVBridge:
 
         start = time.time()
         while time.time() - start < timeout:
-            msg = self._read(type='COMMAND_ACK', timeout=1)
+            msg = self._read(msg_type='COMMAND_ACK', timeout=1)
 
             if msg and msg.command == mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM:
                 if msg.result == mu.mavlink.MAV_RESULT_ACCEPTED:
@@ -119,7 +119,7 @@ class MAVBridge:
 
     def is_armed(self, timeout=3):
         """Return True if the vehicle is armed, False if disarmed."""
-        msg = self._read(type='HEARTBEAT', timeout=timeout)
+        msg = self._read(msg_type='HEARTBEAT', timeout=timeout)
         if not msg:
             return False
 
@@ -170,7 +170,7 @@ class MAVBridge:
         param_request_sent = True
 
         while True:
-            msg = self._read(type='PARAM_VALUE', timeout=1)
+            msg = self._read(msg_type='PARAM_VALUE', timeout=1)
 
             if msg:
                 # param_id may be bytes (py3) or already str depending on pymavlink version
@@ -211,7 +211,7 @@ class MAVBridge:
         )
 
         while True:
-            msg = self._read(type='PARAM_VALUE', timeout=5)
+            msg = self._read(msg_type='PARAM_VALUE', timeout=5)
             if msg:
                 if isinstance(msg.param_id, (bytes, bytearray)):
                     param_name = msg.param_id.decode('utf-8', errors='ignore').rstrip('\x00')
@@ -482,7 +482,7 @@ class MAVBridge:
         start = time.time()
         end = start + timeout
         while time.time() < end:
-            msg = self._read(type='SYS_STATUS', timeout=0.5)
+            msg = self._read(msg_type='SYS_STATUS', timeout=0.5)
             if msg:
                 return {
                     'voltage': msg.voltage_battery / 1000.0 if msg.voltage_battery is not None else None,
@@ -680,7 +680,7 @@ class MAVBridge:
 
             while uploaded < count:
                 msg = self._read(
-                    type=["MISSION_REQUEST", "MISSION_REQUEST_INT"],
+                    msg_type=["MISSION_REQUEST", "MISSION_REQUEST_INT"],
                     timeout=5
                 )
 
@@ -720,7 +720,7 @@ class MAVBridge:
                 self._send_mission_item(seq, item)
                 uploaded += 1
 
-            ack = self._read(type="MISSION_ACK", timeout=5)
+            ack = self._read(msg_type="MISSION_ACK", timeout=5)
 
             if not ack:
                 raise TimeoutError("No MISSION_ACK received after upload")
@@ -775,7 +775,7 @@ class MAVBridge:
                     self.master.target_component
                 )
 
-                msg = self._read(type="MISSION_COUNT", timeout=5)
+                msg = self._read(msg_type="MISSION_COUNT", timeout=5)
 
                 if msg:
                     break
@@ -826,7 +826,7 @@ class MAVBridge:
                     deadline = time.time() + 10
                     while time.time() < deadline:
                         msg = self._read(
-                            type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
+                            msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
                             timeout=1
                         )
                         if not msg:
@@ -878,7 +878,7 @@ class MAVBridge:
                     self.master.target_component
                 )
 
-                msg = self._read(type="MISSION_COUNT", timeout=5)
+                msg = self._read(msg_type="MISSION_COUNT", timeout=5)
 
                 if msg:
                     break
@@ -929,7 +929,7 @@ class MAVBridge:
                     deadline = time.time() + 10
                     while time.time() < deadline:
                         msg = self._read(
-                            type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
+                            msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
                             timeout=1
                         )
                         if not msg:
@@ -988,7 +988,7 @@ class MAVBridge:
             count = None
 
             while time.time() - start < timeout:
-                msg = self._read(type="MISSION_COUNT", timeout=1)
+                msg = self._read(msg_type="MISSION_COUNT", timeout=1)
 
                 if msg:
                     count = msg.count
@@ -1014,7 +1014,7 @@ class MAVBridge:
                 t0 = time.time()
 
                 while time.time() - t0 < timeout:
-                    msg = self._read(type="MISSION_ITEM_INT", timeout=1)
+                    msg = self._read(msg_type="MISSION_ITEM_INT", timeout=1)
 
                     if msg and msg.seq == seq:
                         item = msg
@@ -1028,7 +1028,7 @@ class MAVBridge:
             # -------------------------------------------------
             # 4. Wait for ACK
             # -------------------------------------------------
-            ack = self._read(type="MISSION_ACK", timeout=timeout)
+            ack = self._read(msg_type="MISSION_ACK", timeout=timeout)
 
             return {
                 "count": count,
@@ -1182,7 +1182,7 @@ class MAVBridge:
         )
 
         while True:
-            msg = self._read(timeout=5)
+            msg = self._read(msg_type=None, timeout=5)
             if msg and msg.get_type() == 'HEARTBEAT':
                 mode_id = msg.custom_mode
                 mode_mapping = self.master.mode_mapping()
