@@ -24,7 +24,7 @@ class MAVBridge:
         self.target_system = target_system
         self.target_component = target_component
         self._master_lock = threading.Lock()
-        self._latest = None  # cache of last received MAVLink message
+        self._latest = threading.local()  # thread-local cache of last received message
         self.health = {
             'connected': False,
             'battery_voltage': None,
@@ -42,12 +42,12 @@ class MAVBridge:
     def _read(self, msg_type=None, timeout=1.0):
         """Single threaded recv_match wrapper.
 
-        Acquires _master_lock, calls recv_match, caches result in self._latest,
-        releases lock, and returns the message.
+        Acquires _master_lock, calls recv_match, caches result in thread-local
+        self._latest, releases lock, and returns the message.
         """
         with self._master_lock:
             msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-            self._latest = msg
+            self._latest.value = msg
             return msg
 
     def connect(self, timeout=30):
