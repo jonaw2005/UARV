@@ -4,6 +4,8 @@ Provides connect, send_command_long, arm/disarm, set_mode and a receive loop.
 
 Install dependency: pip install pymavlink
 """
+from venv import logger
+
 from pymavlink import mavutil as mu
 import threading
 import time
@@ -755,6 +757,66 @@ class MAVBridge:
             item.get("lon", 0),
             item.get("alt", 0)
         )
+
+
+    def download_mission_test_2(self, timeout=10):
+        """Downloads the mission from the Pixhawk and returns a list of items."""
+        if not self.master:
+            self.logger.error("Not connected to Pixhawk. Call connect() first.")
+            return None
+
+        mission_items = []
+
+        self.logger.info("Requesting mission list...")
+        self.master.mav.mission_request_list_send(
+            self.target_system,
+            self.target_component,
+            mu.mavlink.MAV_MISSION_TYPE_MISSION
+        )
+
+        msg = self._read_message("MISSION_COUNT", timeout=timeout)
+        if not msg:
+            logger.error("Failed to get MISSION_COUNT from Pixhawk.")
+            return None
+
+        num_items = msg.count
+        self.logger.info(f"Pixhawk reports {num_items} mission items.")
+
+        if num_items == 0:
+            self.logger.info("No mission items on Pixhawk.")
+            return []
+
+        for seq in range(num_items):
+            self.master.mav.mission_request_int_send(
+                self.target_system,
+                self.target_component,
+                seq,
+                mu.mavlink.MAV_MISSION_TYPE_MISSION
+            )
+            item_msg = self._read(["MISSION_ITEM_INT", "MISSION_ITEM"], timeout=timeout)
+
+            if not item_msg or item_msg.seq != seq:
+                self.logger.error(f"Failed to download mission item {seq}.")
+                return None
+
+            # Convert MAVLink message to a dictionary for logging and comparison
+            mission_items.append({
+                "frame": item_msg.frame,
+                "command": item_msg.command,
+                "param1": item_msg.param1,
+                "param2": item_msg.param2,
+                "param3": item_msg.param3,
+                "param4": item_msg.param4,
+                "x": item_msg.x,
+                "y": item_msg.y,
+                "z": item_msg.z,
+                "current": item_msg.current,
+                "autocontinue": item_msg.autocontinue
+            })
+            self.logger.debug(f"Downloaded mission item {seq}")
+
+        logger.info("Mission download complete.")
+        return mission_items
 
 
     def download_mission_test(self):
