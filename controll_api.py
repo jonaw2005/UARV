@@ -501,7 +501,7 @@ def upload_mission():
     logging.info("Translated MAVLink items: %s", mav_items)
     #logging.warning("Translated MAVLink items: %s", mav_items)
     try:
-        future = run_task(bridge.upload_mission_test, mav_items)
+        future = run_task(bridge.upload_mission, mav_items)
         response = future.result(timeout=30)
         return jsonify({
             "status": "upload_complete",
@@ -516,7 +516,7 @@ def upload_mission():
 @app.route("/mission_download", methods=["GET"])
 def download_mission():
     try:
-        future = run_task(bridge.download_mission_test_2)
+        future = run_task(bridge.download_mission)
         result = future.result(timeout=35)
         return jsonify(result), 200
     except Exception as e:

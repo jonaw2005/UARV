@@ -82,11 +82,26 @@ class MAVBridge:
         #self._health_thread.start()
 
 
-    def send_command_long(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
+# done
+    def send_command_long_send(self, command, param1=0, param2=0, param3=0, param4=0, param5=0, param6=0, param7=0, confirmation=0):
         self.logger.debug(f"send_command_long")
-        pass
 
+        command_long_message = mu.mavlink.MAVLink_command_long_message(
+            self.target_system,
+            self.target_component,
+            command,
+            confirmation,
+            param1,
+            param2,
+            param3,
+            param4,
+            param5,
+            param6,
+            param7
+        )
+        self._write(command_long_message)
 
+# done
     def _arm_disarm_sync(self, arm: bool, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Synchronously send arm/disarm command and wait for COMMAND_ACK.
@@ -100,14 +115,16 @@ class MAVBridge:
             True if the command was accepted, False otherwise.
         """
         self.logger.debug(f"_arm_disarm_sync")
-        self.master.mav.command_long_send(
-            self.target_system,
-            self.target_component,
+        self.send_command_long(
             mu.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
             0,  # confirmation
             1 if arm else 0,  # param1: 1=arm, 0=disarm
             21196 if force else 0,  # param2: force flag
-            0, 0, 0, 0, 0
+            0,
+            0,
+            0,
+            0,
+            0
         )
 
         start = time.time()
@@ -120,6 +137,7 @@ class MAVBridge:
 
         return False
 
+# done
     def arm(self, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Arms the vehicle and waits for confirmation.
@@ -129,6 +147,7 @@ class MAVBridge:
         self.logger.debug(f"arm")
         return self._arm_disarm_sync(arm=True, force=force, timeout=timeout)
 
+# done
     def disarm(self, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Disarms the vehicle and waits for confirmation.
@@ -138,7 +157,7 @@ class MAVBridge:
         self.logger.debug(f"disarm")
         return self._arm_disarm_sync(arm=False, force=force, timeout=timeout)
 
-
+# done
     def is_armed(self, timeout=3):
         """Return True if the vehicle is armed, False if disarmed."""
         self.logger.debug(f"is_armed")
@@ -149,7 +168,7 @@ class MAVBridge:
 
         return bool(msg.base_mode & mu.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
 
-
+# done
     def goto(self, lat, lon, alt):
             """
             Send a GPS waypoint (global position target).
@@ -158,7 +177,7 @@ class MAVBridge:
             """
             self.logger.debug(f"goto")
 
-            self.master.mav.set_position_target_global_int_send(
+            set_position_target_global_int_message = mu.mavlink.MAVLink_set_position_target_global_int_message(
                 0,  # time_boot_ms
 
                 self.master.target_system,
@@ -178,16 +197,20 @@ class MAVBridge:
                 0, 0              # yaw ignored
             )
 
+            self._write(set_position_target_global_int_message)
 
+#done
     def get_all_params(self):
         self.logger.debug(f"get_all_params")
 
         self.logger.info("Requesting parameter list...")
 
-        self.master.mav.param_request_list_send(
+        param_request_list_message = mu.mavlink.MAVLink_param_request_list_message(
             self.master.target_system,
             self.master.target_component
         )
+
+        self._write(param_request_list_message)
 
         params = {}
 
@@ -211,10 +234,12 @@ class MAVBridge:
             if time.time() - last_param_time > 3 and time.time() - last_request_time > 3:
                 if len(params) == 0:  # No parameters received yet, retry
                     self.logger.info("No parameters received, retrying request...")
-                    self.master.mav.param_request_list_send(
+                    param_request_list_message = mu.mavlink.MAVLink_param_request_list_message(
                         self.master.target_system,
                         self.master.target_component
                     )
+
+                    self._write(param_request_list_message)
                     last_request_time = time.time()
                 else:
                     # Got some parameters but no more for 3 seconds, stop
@@ -227,15 +252,18 @@ class MAVBridge:
         self.logger.info(f"Fertig: {len(params)} Parameter")
         return params
 
-
+# done
     def get_param(self, name):
         self.logger.debug(f"get_param")
-        self.master.mav.param_request_read_send(
+
+        param_request_read_message = mu.mavlink.MAVLink_param_request_read_message(
             self.master.target_system,
             self.master.target_component,
             name.encode('utf-8'),
             -1
         )
+
+        self._write(param_request_read_message)
 
         while True:
             msg = self._read(msg_type='PARAM_VALUE', timeout=5)
@@ -249,18 +277,21 @@ class MAVBridge:
             else:
                 raise TimeoutError(f"Timeout waiting for parameter {name}")
 
-
+# done
     def get_telemetry(self, timeout=5):
         """Request current telemetry and return a JSON-friendly dict."""
         self.logger.debug(f"get_telemetry")
         try:
-            self.master.mav.request_data_stream_send(
+            request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
                 self.master.target_system,
                 self.master.target_component,
                 mu.mavlink.MAV_DATA_STREAM_ALL,
                 1,
                 1,
             )
+            
+            self._write(request_data_stream_message)
+
         except Exception:
             pass
 
@@ -323,16 +354,20 @@ class MAVBridge:
 
         return telemetry
 
+# done
     def get_gps_status(self, timeout=5):
         self.logger.debug(f"get_gps_status")
         try:
-            self.master.mav.request_data_stream_send(
+            request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
                 self.master.target_system,
                 self.master.target_component,
                 mu.mavlink.MAV_DATA_STREAM_ALL,
                 1,
                 1,
             )
+            
+            self._write(request_data_stream_message)
+
         except Exception:
             pass
 
@@ -355,13 +390,12 @@ class MAVBridge:
 
         return gps_status
 
+# done
     def get_gps_raw(self, timeout=5, hz: int = 5):
         self.logger.debug(f"get_gps_raw")
         interval_us = int(1e6 / hz)
         try:
-            self.master.mav.command_long_send(
-                self.target_system,
-                self.target_component,
+            self.command_long_send(
                 mu.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
                 0,
                 mu.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT,
@@ -398,13 +432,12 @@ class MAVBridge:
 
         return gps_raw
 
+# done
     def get_gps_int(self, timeout=5, hz: int=5):
         self.logger.debug(f"get_gps_int")
         interval_us = int(1e6 / hz)
         try:
-            self.master.mav.command_long_send(
-                self.target_system,
-                self.target_component,
+            self.command_long_send(
                 mu.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
                 0,
                 mu.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT,
@@ -443,6 +476,7 @@ class MAVBridge:
 
         return gps_int
 
+# not needed anymore
     def _health_loop(self):
         # continuously collect a small set of status messages into self.health
         self.logger.debug(f"_health_loop")
@@ -487,11 +521,13 @@ class MAVBridge:
                 pass
             time.sleep(1.0)
 
+# unused
     def get_health(self):
         # return a shallow copy of health dictionary
         self.logger.debug(f"get_health")
         return dict(self.health)
 
+# done
     def battery_level(self, timeout=3):
         """
         Request and return battery status from the autopilot.
@@ -505,13 +541,16 @@ class MAVBridge:
         """
         self.logger.debug(f"battery_level")
         try:
-            self.master.mav.request_data_stream_send(
+            request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
                 self.master.target_system,
                 self.master.target_component,
                 mu.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,
                 1,
                 1,
             )
+            
+            self._write(request_data_stream_message)
+
         except Exception:
             pass
 
@@ -533,6 +572,7 @@ class MAVBridge:
             'remaining': self.health.get('battery_remaining'),
         }
 
+# done
     def get_location(self):
         self.logger.debug(f"get_location")
         telemetry = self.get_telemetry()
@@ -544,8 +584,8 @@ class MAVBridge:
         }
 
 
-# -----------------------------
-    # VELOCITY CONTROL (dein Beispiel)
+    # -----------------------------
+    # VELOCITY CONTROL (dein Beispiel) # done
     # -----------------------------
     def set_velocity(self, vx, vy, vz):
         """
@@ -558,7 +598,7 @@ class MAVBridge:
 
         type_mask = 0b0000111111000111
 
-        self.master.mav.set_position_target_local_ned_send(
+        set_position_target_local_ned_message = mu.mavlink.MAVLink_set_position_target_local_ned_message(
             0,
             self.master.target_system,
             self.master.target_component,
@@ -570,12 +610,14 @@ class MAVBridge:
             0, 0
         )
 
+        self._write(set_position_target_local_ned_message)
+
     # -----------------------------
-    # TAKEOFF (GUIDED MODE)
+    # TAKEOFF (GUIDED MODE) # done
     # -----------------------------
     def takeoff(self, altitude):
         self.logger.debug(f"takeoff")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_NAV_TAKEOFF,
@@ -586,11 +628,11 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # RTL
+    # RTL # done
     # -----------------------------
     def rtl(self):
         self.logger.debug(f"rtl")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
@@ -599,11 +641,11 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # LAND
+    # LAND # done
     # -----------------------------
     def land(self):
         self.logger.debug(f"land")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_NAV_LAND,
@@ -612,13 +654,13 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CHANGE SPEED
+    # CHANGE SPEED # done
     # -----------------------------
     def set_speed(self, speed, airspeed=True):
         self.logger.debug(f"set_speed")
         speed_type = 0 if airspeed else 1
 
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_DO_CHANGE_SPEED,
@@ -630,11 +672,11 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CONDITION YAW
+    # CONDITION YAW # done
     # -----------------------------
     def condition_yaw(self, heading, relative=False, speed=0, direction=0):
         self.logger.debug(f"condition_yaw")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_CONDITION_YAW,
@@ -647,11 +689,11 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # LOITER TIME (guided trigger)
+    # LOITER TIME (guided trigger) # done
     # -----------------------------
     def loiter_time(self, seconds):
         self.logger.debug(f"loiter_time")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_NAV_LOITER_TIME,
@@ -666,11 +708,11 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # CHANGE ALTITUDE (guided)
+    # CHANGE ALTITUDE (guided) # done
     # -----------------------------
     def change_altitude(self, altitude):
         self.logger.debug(f"change_altitude")
-        self.master.mav.command_long_send(
+        self.command_long_send(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE,
@@ -680,7 +722,7 @@ class MAVBridge:
         )
 
     # -----------------------------
-    # SET MODE (optional but useful)
+    # SET MODE (optional but useful) # done
     # -----------------------------
     def set_mode(self, mode):
         self.logger.debug(f"set_mode")
@@ -691,18 +733,20 @@ class MAVBridge:
 
         mode_id = mode_mapping[mode]
 
-        self.master.mav.set_mode_send(
+        set_mode_message = mu.mavlink.MAVLink_set_mode_message(
             self.master.target_system,
             mu.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
             mode_id
         )
 
+        self._write(set_mode_message)
 
- # --------------------------------------------------
-    # PUBLIC: Mission Upload Entry Point
+
+    # --------------------------------------------------
+    # PUBLIC: Mission Upload Entry Point # done
     # --------------------------------------------------
 
-    def upload_mission_test(self, mission_items):
+    def upload_mission(self, mission_items):
         self.logger.debug(f"upload_mission_test")
         num_items = len(mission_items)
         self.logger.info(f"Uploading mission with {num_items} items.")
@@ -797,95 +841,13 @@ class MAVBridge:
             return False
 
 
-
-
-    def upload_mission(self, mission_items):
-        """
-        mission_items = already translated MAVLink-ready list
-        """
-        self.logger.debug(f"upload_mission")
-        with self._master_lock:
-
-            self.master.mav.mission_clear_all_send(
-                self.master.target_system,
-                self.master.target_component
-            )
-
-            time.sleep(0.3)
-
-            count = len(mission_items)
-            self.logger.info(f"Starting mission upload: {count} items")
-            uploaded = 0
-
-            self.master.mav.mission_count_send(
-                self.master.target_system,
-                self.master.target_component,
-                count
-            )
-
-            while uploaded < count:
-                msg = self._read(
-                    msg_type=["MISSION_REQUEST", "MISSION_REQUEST_INT"],
-                    timeout=5
-                )
-
-                if not msg:
-                    # Autopilot stopped requesting — re-send count as reminder
-                    self.logger.warning(
-                        f"No request received, re-sending count ({uploaded}/{count} done)"
-                    )
-                    self.master.mav.mission_count_send(
-                        self.master.target_system,
-                        self.master.target_component,
-                        count
-                    )
-                    continue
-
-                seq = msg.seq
-                self.logger.info(f"Received request for seq {seq}/{count}")
-
-                # If the autopilot requests an item we already sent, it likely
-                # reset its buffer (e.g. after mission_clear_all). Re-send it.
-                if seq < uploaded:
-                    self.logger.warning(
-                        f"Pixhawk requested seq {seq} again (buffer reset?), re-sending"
-                    )
-                    item = mission_items[seq]
-                    self._send_mission_item(seq, item)
-                    continue
-
-                # If seq jumped ahead, we can't handle that — abort
-                if seq != uploaded:
-                    raise RuntimeError(
-                        f"Autopilot requested seq {seq} but expected {uploaded}"
-                    )
-
-                item = mission_items[seq]
-                self.logger.info(f"Uploading mission seq {seq}/{count}: {item}")
-                self._send_mission_item(seq, item)
-                uploaded += 1
-
-            ack = self._read(msg_type="MISSION_ACK", timeout=5)
-
-            if not ack:
-                raise TimeoutError("No MISSION_ACK received after upload")
-
-            ack_result = getattr(ack, 'result', None)
-            if ack_result is not None and ack_result != mu.mavlink.MAV_RESULT_ACCEPTED:
-                raise RuntimeError(
-                    f"MISSION_ACK not accepted: result={ack_result}, type={ack.type}"
-                )
-
-            self.logger.info(f"Mission upload complete: {count} items, ACK={ack.result}, type={ack.type}")
-            return str(ack)
-
     # --------------------------------------------------
-    # INTERNAL: send single item
+    # INTERNAL: send single item # done
     # --------------------------------------------------
     def _send_mission_item(self, seq, item):
         self.logger.debug(f"_send_mission_item")
 
-        self.master.mav.mission_item_int_send(
+        mission_item_int_message = mu.mavlink.MAVLink_mission_item_int_message(
             self.master.target_system,
             self.master.target_component,
             seq,
@@ -901,12 +863,11 @@ class MAVBridge:
             item.get("alt", 0)
         )
 
+        self._write(mission_item_int_message)
 
 
-
-# download_mission_test_2 is working
-
-    def download_mission_test_2(self, timeout=10):
+# done
+    def download_mission(self, timeout=10):
         """Downloads the mission from the Pixhawk and returns a list of items."""
         self.logger.debug(f"download_mission_test_2")
         if not self.master:
@@ -973,432 +934,8 @@ class MAVBridge:
         return mission_items
 
 
-    def download_mission_test(self):
-        """Quick test: request mission list, download all items, return parsed mission."""
-        self.logger.debug(f"download_mission_test")
-        # ── Step 1: Get MISSION_COUNT ─────────────────────────────────────
-        count_msg = None
-        for attempt in range(5):
-            self.logger.debug(f"[download_mission_test] Sending MISSION_REQUEST_LIST (attempt {attempt + 1})")
-            self.master.mav.mission_request_list_send(
-                self.target_system,
-                self.target_component,
-                mu.mavlink.MAV_MISSION_TYPE_MISSION
-            )
-
-            count_msg = self._read(msg_type="MISSION_COUNT", timeout=3)
-            if count_msg:
-                self.logger.info(f"[download_mission_test] Got MISSION_COUNT on attempt {attempt + 1}: {count_msg.count} items")
-                break
-            self.logger.warning(f"[download_mission_test] No MISSION_COUNT on attempt {attempt + 1}, retrying...")
-        else:
-            self.logger.error("[download_mission_test] FAILED: No MISSION_COUNT after 5 attempts")
-            raise TimeoutError("No mission data received")
-
-        count = count_msg.count
-
-        # Empty mission is valid
-        if count == 0:
-            self.logger.info("[download_mission_test] Empty mission (count=0)")
-            return {"count": 0, "mission": []}
-
-        # ── Step 2: Wait for Pixhawk to load mission from flash ────────────
-        self.logger.info("[download_mission_test] Waiting 5s for Pixhawk to prepare items...")
-        time.sleep(5.0)
-
-        # ── Step 3: Download each item ────────────────────────────────────
-        mission_items = []
-        for seq in range(count):
-            item = None
-            for attempt in range(5):
-                if attempt < 3:
-                    self.master.mav.mission_request_int_send(
-                        self.target_system, self.target_component, seq,
-                        mu.mavlink.MAV_MISSION_TYPE_MISSION
-                    )
-                else:
-                    self.master.mav.mission_request_send(
-                        self.target_system, self.target_component, seq
-                    )
-
-                #deadline = time.time() + 10
-                while True:#time.time() < deadline:
-                    msg = self._read(
-                        msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
-                        timeout=1
-                    )
-                    if not msg:
-                        continue
-                    if msg.get_type() in ("MISSION_ITEM_INT", "MISSION_ITEM"):
-                        item = msg
-                        break
-
-                if item and item.seq == seq:
-                    self.logger.info(f"[download_mission_test] Got item seq={seq}")
-                    mission_items.append(self._parse_mission_item(item, seq=seq))
-                    break
-
-                if item and item.seq != seq:
-                    self.logger.warning(f"[download_mission_test] Wrong seq: expected {seq}, got {item.seq}, re-requesting...")
-                    time.sleep(0.5)
-                    continue
-
-                self.logger.warning(f"[download_mission_test] No item for seq {seq} (attempt {attempt + 1}/5)")
-                time.sleep(0.5)
-            else:
-                raise TimeoutError(f"No mission item for seq {seq}")
-
-        self.logger.info(f"[download_mission_test] Downloaded {len(mission_items)}/{count} items")
-        return {"count": count, "mission": mission_items}
     # --------------------------------------------------
-    # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
-    # --------------------------------------------------
-    def download_mission_raw(self):
-        """
-        Download mission and return raw MAVLink message dicts
-        (no translation / parsing — original MAVLink field names).
-        """
-        self.logger.debug(f"download_mission_raw")
-        with self._master_lock:
-            mission = []
-
-            # 1. Request Mission List (with retry)
-            msg = None
-            for attempt in range(3):
-                self.master.mav.mission_request_list_send(
-                    self.master.target_system,
-                    self.master.target_component
-                )
-
-                msg = self._read(msg_type="MISSION_COUNT", timeout=5)
-
-                if msg:
-                    break
-
-                self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
-                time.sleep(0.5)
-
-            if not msg:
-                raise TimeoutError("No MISSION_COUNT received after 3 attempts")
-
-            count = msg.count
-            self.logger.info(f"Pixhawk reports {count} mission items")
-
-            # Empty mission is valid
-            if count == 0:
-                return []
-
-            # ArduPlane needs time to load mission from flash after MISSION_COUNT.
-            # Without this delay it re-sends seq 0 for every request.
-            time.sleep(5.0)
-
-            self.logger.info(
-                f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
-            )
-
-            # 2. Request each item by seq, return raw message as dict
-            for seq in range(count):
-                item = None
-                for attempt in range(5):
-                    # Try MISSION_REQUEST_INT first, fall back to MISSION_REQUEST
-                    if attempt < 3:
-                        self.master.mav.mission_request_int_send(
-                            self.master.target_system,
-                            self.master.target_component,
-                            seq
-                        )
-                    else:
-                        self.master.mav.mission_request_send(
-                            self.master.target_system,
-                            self.master.target_component,
-                            seq
-                        )
-
-                    self.logger.debug(f"Sent request for seq {seq} (attempt {attempt + 1})")
-
-                    # Read with a short non-blocking timeout in a loop so we can
-                    # also catch any stray messages the Pixhawk might send
-                    deadline = time.time() + 10
-                    while time.time() < deadline:
-                        msg = self._read(
-                            msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
-                            timeout=1
-                        )
-                        if not msg:
-                            continue
-                        msg_type = msg.get_type()
-                        if msg_type in ("MISSION_ITEM_INT", "MISSION_ITEM"):
-                            item = msg
-                            break
-                        self.logger.debug(
-                            f"Ignoring {msg_type} during download (seq={getattr(msg, 'seq', '?')})"
-                        )
-
-                    if item:
-                        self.logger.info(f"Received {item.get_type()} for seq {item.seq}")
-                        break
-
-                    self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/5)")
-                    time.sleep(0.5)
-                else:
-                    raise TimeoutError(f"No mission item for seq {seq} after 5 attempts")
-
-                if item.seq == seq:
-                    mission.append(item.to_dict())
-                else:
-                    # Pixhawk sent wrong seq — discard and re-request same seq
-                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, re-requesting...")
-                    time.sleep(0.5)
-                    seq -= 1
-                    continue
-
-            return mission
-
-    # --------------------------------------------------
-    # DOWNLOAD MISSION FROM AUTOPILOT (parsed / translated)
-    # --------------------------------------------------
-    def download_mission_2(self):
-        """
-        Holt komplette Mission vom Pixhawk (ArduPlane)
-        und gibt sie als strukturierte Liste zurück
-        """
-        self.logger.debug(f"download_mission_2")
-        with self._master_lock:
-            mission = []
-
-            # 1. Request Mission List (with retry)
-            msg = None
-            for attempt in range(3):
-                self.master.mav.mission_request_list_send(
-                    self.master.target_system,
-                    self.master.target_component
-                )
-
-                msg = self._read(msg_type="MISSION_COUNT", timeout=5)
-
-                if msg:
-                    break
-
-                self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
-                time.sleep(0.5)
-
-            if not msg:
-                raise TimeoutError("No MISSION_COUNT received after 3 attempts")
-
-            count = msg.count
-            self.logger.info(f"Pixhawk reports {count} mission items")
-
-            # Empty mission is valid
-            if count == 0:
-                return []
-
-            # ArduPlane needs time to load mission from flash after MISSION_COUNT.
-            # Without this delay it re-sends seq 0 for every request.
-            time.sleep(5.0)
-
-            self.logger.info(
-                f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
-            )
-
-            # 2. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
-            for seq in range(count):
-                item = None
-                for attempt in range(5):
-                    # Try MISSION_REQUEST_INT first, fall back to MISSION_REQUEST
-                    if attempt < 3:
-                        self.master.mav.mission_request_int_send(
-                            self.master.target_system,
-                            self.master.target_component,
-                            seq
-                        )
-                    else:
-                        self.master.mav.mission_request_send(
-                            self.master.target_system,
-                            self.master.target_component,
-                            seq
-                        )
-
-                    self.logger.debug(f"Sent request for seq {seq} (attempt {attempt + 1})")
-
-                    # Read with a short non-blocking timeout in a loop so we can
-                    # also catch any stray messages the Pixhawk might send
-                    deadline = time.time() + 10
-                    while time.time() < deadline:
-                        msg = self._read(
-                            msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
-                            timeout=1
-                        )
-                        if not msg:
-                            continue
-                        msg_type = msg.get_type()
-                        if msg_type in ("MISSION_ITEM_INT", "MISSION_ITEM"):
-                            item = msg
-                            break
-                        self.logger.debug(
-                            f"Ignoring {msg_type} during download (seq={getattr(msg, 'seq', '?')})"
-                        )
-
-                    if item:
-                        self.logger.info(f"Received {item.get_type()} for seq {item.seq}")
-                        break
-
-                    self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/5)")
-                    time.sleep(0.5)
-                else:
-                    raise TimeoutError(f"No mission item for seq {seq} after 5 attempts")
-
-                if item.seq == seq:
-                    mission.append(self._parse_mission_item(item, seq=seq))
-                else:
-                    # Pixhawk sent wrong seq — discard and re-request same seq
-                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, re-requesting...")
-                    time.sleep(0.5)
-                    seq -= 1
-                    continue
-
-            return mission
-
-    def download_mission(self, timeout: float = 10.0):
-        """
-        Fully self-contained mission download.
-        Directly reads from MAVLink stream (NO cache, NO _get, NO shared state).
-        Must be the only recv_match consumer while running.
-        """
-        self.logger.debug(f"download_mission")
-        self.logger.info(f"[download_mission] START target_system={self.target_system} target_component={self.target_component} timeout={timeout}s")
-
-        with self._master_lock:
-            mission = {}
-
-            start = time.time()
-            self.logger.debug("[download_mission] Lock acquired, requesting mission list...")
-
-            # -------------------------------------------------
-            # 1. Request mission list
-            # -------------------------------------------------
-            self.master.mav.mission_request_list_send(
-                self.target_system,
-                self.target_component,
-                mu.mavlink.MAV_MISSION_TYPE_MISSION
-            )
-            self.logger.debug("[download_mission] Sent MISSION_REQUEST_LIST")
-
-            # -------------------------------------------------
-            # 2. Wait for MISSION_COUNT
-            # -------------------------------------------------
-            count = None
-            count_attempts = 0
-
-            while time.time() - start < timeout:
-                count_attempts += 1
-                self.logger.debug(f"[download_mission] Waiting for MISSION_COUNT (attempt {count_attempts})...")
-                msg = self._read(msg_type="MISSION_COUNT", timeout=1)
-
-                if msg:
-                    count = msg.count
-                    self.logger.info(f"[download_mission] Received MISSION_COUNT: {count} items (after {count_attempts} attempts, {time.time() - start:.2f}s elapsed)")
-                    break
-
-                self.logger.debug(f"[download_mission] No MISSION_COUNT yet, elapsed={time.time() - start:.2f}s")
-
-            if count is None:
-                elapsed = time.time() - start
-                self.logger.error(f"[download_mission] FAILED: No MISSION_COUNT received after {elapsed:.2f}s and {count_attempts} attempts")
-                raise TimeoutError(f"No MISSION_COUNT received after {elapsed:.2f}s")
-
-            # Empty mission is valid
-            if count == 0:
-                self.logger.info("[download_mission] Empty mission (count=0), returning immediately")
-                return {
-                    "count": 0,
-                    "mission": {},
-                    "ack": None
-                }
-
-            self.logger.info(f"[download_mission] Starting item download: {count} items to fetch")
-
-            # -------------------------------------------------
-            # 3. Request + receive each mission item
-            # -------------------------------------------------
-            for seq in range(count):
-                item_start = time.time()
-                self.logger.debug(f"[download_mission] === Item {seq}/{count} ===")
-
-                # request item
-                self.master.mav.mission_request_int_send(
-                    self.target_system,
-                    self.target_component,
-                    seq,
-                    mu.mavlink.MAV_MISSION_TYPE_MISSION
-                )
-                self.logger.debug(f"[download_mission] Sent MISSION_REQUEST_INT for seq={seq}")
-
-                item = None
-                t0 = time.time()
-                read_attempts = 0
-
-                while time.time() - t0 < timeout:
-                    read_attempts += 1
-                    self.logger.debug(f"[download_mission] Waiting for MISSION_ITEM_INT seq={seq} (read attempt {read_attempts}, elapsed={time.time() - t0:.2f}s)")
-                    msg = self._read(msg_type="MISSION_ITEM_INT", timeout=1)
-
-                    if msg:
-                        self.logger.debug(f"[download_mission] Received message: type={msg.get_type()}, seq={getattr(msg, 'seq', '?')}, cmd={getattr(msg, 'command', '?')}")
-
-                    if msg and msg.seq == seq:
-                        item = msg
-                        item_elapsed = time.time() - item_start
-                        self.logger.info(f"[download_mission] Got MISSION_ITEM_INT for seq={seq} after {read_attempts} reads, {item_elapsed:.2f}s total")
-                        break
-
-                    if msg and msg.seq != seq:
-                        self.logger.warning(f"[download_mission] Got MISSION_ITEM_INT but wrong seq: expected {seq}, got {msg.seq}")
-
-                if item is None:
-                    elapsed = time.time() - t0
-                    total_elapsed = time.time() - start
-                    self.logger.error(f"[download_mission] FAILED: Missing mission item seq={seq} after {read_attempts} reads, {elapsed:.2f}s waiting, {total_elapsed:.2f}s total")
-                    raise TimeoutError(f"Missing mission item seq={seq} after {elapsed:.2f}s")
-
-                parsed = self._parse_mission_item(item, seq=seq)
-                self.logger.debug(f"[download_mission] Parsed seq={seq}: type={parsed.get('type')}, action={parsed.get('action', 'N/A')}, lat={parsed.get('lat', 'N/A')}, lon={parsed.get('lon', 'N/A')}")
-                mission[seq] = parsed
-
-            total_download_time = time.time() - start
-            self.logger.info(f"[download_mission] All {count} items downloaded in {total_download_time:.2f}s")
-
-            # -------------------------------------------------
-            # 4. Wait for ACK (non-blocking with retries)
-            # -------------------------------------------------
-            self.logger.debug("[download_mission] Waiting for MISSION_ACK...")
-            ack = None
-            for ack_attempt in range(5):
-                # Release lock between attempts so health loop can run
-                time.sleep(0.5)
-                ack = self._read(msg_type="MISSION_ACK", timeout=1)
-                if ack:
-                    ack_type = getattr(ack, "type", None)
-                    ack_result = getattr(ack, "result", None)
-                    self.logger.info(f"[download_mission] Received MISSION_ACK on attempt {ack_attempt + 1}: type={ack_type}, result={ack_result}")
-                    break
-                self.logger.debug(f"[download_mission] No MISSION_ACK yet (attempt {ack_attempt + 1}/5), retrying...")
-
-            if not ack:
-                self.logger.warning("[download_mission] No MISSION_ACK received after 5 attempts — returning mission data anyway")
-
-            result = {
-                "count": count,
-                "mission": mission,
-                "ack": getattr(ack, "type", None) if ack else None
-            }
-
-            total_time = time.time() - start
-            self.logger.info(f"[download_mission] COMPLETE: {count} items in {total_time:.2f}s, ack={result['ack']}")
-            return result
-
-
-    # --------------------------------------------------
-    # INTERNAL: MAVLink → JSON
+    # INTERNAL: MAVLink → JSON # done
     # --------------------------------------------------
     def _parse_mission_item(self, item, seq=None):
         self.logger.debug(f"_parse_mission_item")
@@ -1508,7 +1045,7 @@ class MAVBridge:
             "command": cmd
         }
 
-
+#done
     def change_mode(self, mode):
         self.logger.debug(f"change_mode")
         mode_mapping = self.master.mode_mapping()
@@ -1518,12 +1055,14 @@ class MAVBridge:
 
         mode_id = mode_mapping[mode]
 
-        self.master.mav.set_mode_send(
+        set_mode_message = mu.mavlink.MAVLink_set_mode_message(
             self.master.target_system,
             mu.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
             mode_id
         )
+        self._write(set_mode_message)
 
+#done
     def abort_mission(self):
         self.logger.debug(f"abort_mission")
         # example: disarm and set mode to MANUAL
@@ -1531,20 +1070,26 @@ class MAVBridge:
         time.sleep(0.5)
         self.change_mode("MANUAL")
 
+#done
     def start_mission(self):
         self.logger.debug(f"start_mission")
         # example: set mode to AUTO
         self.change_mode("AUTO")
 
+
+#done
     def get_mode(self):
         self.logger.debug(f"get_mode")
-        self.master.mav.request_data_stream_send(
+
+        request_data_stream_message = mu.mavlink.MAVLink_request_data_stream_message(
             self.master.target_system,
             self.master.target_component,
             mu.mavlink.MAV_DATA_STREAM_ALL,
             1,
             1,
         )
+
+        self._write(request_data_stream_message)
 
         while True:
             msg = self._read(msg_type=None, timeout=5)
@@ -1558,7 +1103,7 @@ class MAVBridge:
             elif not msg:
                 raise TimeoutError("Timeout waiting for HEARTBEAT to get mode")
 
-
+#TODO: edit to message
     def start_rc_override(self):
         self.logger.debug(f"start_rc_override")
         while True:
