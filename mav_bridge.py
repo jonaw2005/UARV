@@ -122,6 +122,7 @@ class MAVBridge:
         msg = self._read(msg_type='HEARTBEAT', timeout=timeout)
         if not msg:
             return False
+        self.logger.debug(f"HEARTBEAT received: base_mode={msg.base_mode}, system_status={msg.system_status}")
 
         return bool(msg.base_mode & mu.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
 
