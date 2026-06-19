@@ -100,7 +100,7 @@ class MAVBridge:
 
         return False
 
-    def arm(self, force: bool = True, timeout: float = 5.0) -> bool:
+    def arm(self, force: bool = False, timeout: float = 5.0) -> bool:
         """
         Arms the vehicle and waits for confirmation.
 
