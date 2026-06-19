@@ -19,7 +19,7 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format="[%(levelname)s]: %(asctime)s - %(message)s"
 )
 
@@ -490,7 +490,7 @@ def upload_mission():
 
     mav_items = translate_mission(mission_json)
     logging.info("Translated MAVLink items: %s", mav_items)
-
+    logging.warning("Translated MAVLink items: %s", mav_items)
     try:
         future = run_task(bridge.upload_mission_test, mav_items)
         response = future.result(timeout=30)
