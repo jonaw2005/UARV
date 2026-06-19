@@ -1,0 +1,46 @@
+Date : 2026-06-19 07:25:07
+Directory : c:\Coding\UARV
+Total : 15 files,  4615 codes, 595 comments, 928 blanks, all 6138 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Python           |          5 |      2,631 |        484 |        579 |      3,694 |
+| JavaScript       |          4 |        917 |         48 |        143 |      1,108 |
+| PostCSS          |          2 |        617 |          3 |        103 |        723 |
+| HTML             |          2 |        227 |          2 |          7 |        236 |
+| Shell Script     |          1 |        217 |         58 |         95 |        370 |
+| pip requirements |          1 |          6 |          0 |          1 |          7 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                            | files      | code       | comment    | blank      | total      |
++-------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                               |         15 |      4,615 |        595 |        928 |      6,138 |
+| . (Files)                                       |          7 |      2,854 |        542 |        675 |      4,071 |
+| admin_panel                                     |          8 |      1,761 |         53 |        253 |      2,067 |
++-------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                        | language         | code       | comment    | blank      | total      |
++-------------------------------------------------+------------------+------------+------------+------------+------------+
+| c:\Coding\UARV\admin_panel\buttons.js           | JavaScript       |        162 |         12 |         31 |        205 |
+| c:\Coding\UARV\admin_panel\camera.js            | JavaScript       |         45 |         10 |         17 |         72 |
+| c:\Coding\UARV\admin_panel\index.html           | HTML             |        132 |          2 |          5 |        139 |
+| c:\Coding\UARV\admin_panel\map.js               | JavaScript       |        257 |         11 |         44 |        312 |
+| c:\Coding\UARV\admin_panel\mission_planner.css  | PostCSS          |        215 |          0 |         36 |        251 |
+| c:\Coding\UARV\admin_panel\mission_planner.html | HTML             |         95 |          0 |          2 |         97 |
+| c:\Coding\UARV\admin_panel\mission_planner.js   | JavaScript       |        453 |         15 |         51 |        519 |
+| c:\Coding\UARV\admin_panel\stylesheet.css       | PostCSS          |        402 |          3 |         67 |        472 |
+| c:\Coding\UARV\controll_api.py                  | Python           |        451 |         37 |        126 |        614 |
+| c:\Coding\UARV\mav_bridge.py                    | Python           |        968 |        186 |        202 |      1,356 |
+| c:\Coding\UARV\mav_bridge_backup.py             | Python           |        889 |        178 |        188 |      1,255 |
+| c:\Coding\UARV\mav_test.py                      | Python           |        144 |         21 |         27 |        192 |
+| c:\Coding\UARV\requirements.txt                 | pip requirements |          6 |          0 |          1 |          7 |
+| c:\Coding\UARV\servo_test.py                    | Python           |        179 |         62 |         36 |        277 |
+| c:\Coding\UARV\update_uarv.sh                   | Shell Script     |        217 |         58 |         95 |        370 |
+| Total                                           |                  |      4,615 |        595 |        928 |      6,138 |
++-------------------------------------------------+------------------+------------+------------+------------+------------+

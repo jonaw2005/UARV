@@ -785,7 +785,7 @@ class MAVBridge:
             return {"count": 0, "mission": []}
 
         # ── Step 2: Wait for Pixhawk to load mission from flash ────────────
-        self.logger.debug("[download_mission_test] Waiting 5s for Pixhawk to prepare items...")
+        self.logger.info("[download_mission_test] Waiting 5s for Pixhawk to prepare items...")
         time.sleep(5.0)
 
         # ── Step 3: Download each item ────────────────────────────────────
@@ -803,8 +803,8 @@ class MAVBridge:
                         self.target_system, self.target_component, seq
                     )
 
-                deadline = time.time() + 10
-                while time.time() < deadline:
+                #deadline = time.time() + 10
+                while True:#time.time() < deadline:
                     msg = self._read(
                         msg_type=["MISSION_ITEM_INT", "MISSION_ITEM", "MISSION_REQUEST", "MISSION_ACK", "HEARTBEAT"],
                         timeout=1
