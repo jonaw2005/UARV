@@ -1056,18 +1056,7 @@ class MAVBridge:
                 if item is None:
                     raise TimeoutError(f"Missing mission item seq={seq}")
 
-                mission[seq] = {
-                    "frame": item.frame,
-                    "command": item.command,
-                    "param1": item.param1,
-                    "param2": item.param2,
-                    "param3": item.param3,
-                    "param4": item.param4,
-                    "x": item.x,
-                    "y": item.y,
-                    "z": item.z,
-                    "autocontinue": item.autocontinue,
-                }
+                mission[seq] = self._parse_mission_item(item, seq=seq)
 
             # -------------------------------------------------
             # 4. Wait for ACK
