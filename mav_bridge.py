@@ -757,21 +757,25 @@ class MAVBridge:
 
 
     def download_mission_test(self):
-        self.master.mav.send(
-            mu.mavlink.MAVLink_mission_request_list_message(
+        """Quick test: request mission list and return MISSION_COUNT as dict."""
+        mission = None
+        for attempt in range(5):
+            self.logger.debug(f"[download_mission_test] Sending MISSION_REQUEST_LIST (attempt {attempt + 1})")
+            self.master.mav.mission_request_list_send(
                 self.target_system,
                 self.target_component,
                 mu.mavlink.MAV_MISSION_TYPE_MISSION
             )
-        )
-        mission = self._read(msg_type="MISSION_COUNT", timeout=15)
-        self.logger.info(f"Mission request list sent, got: {mission}")
-        
-        if mission:
-            return mission.to_dict()
-        else:
-            raise TimeoutError("No mission data received")
-            return "No mission data received"
+
+            mission = self._read(msg_type="MISSION_COUNT", timeout=3)
+            if mission:
+                self.logger.info(f"[download_mission_test] Got MISSION_COUNT on attempt {attempt + 1}: {mission.count} items")
+                return mission.to_dict()
+
+            self.logger.warning(f"[download_mission_test] No MISSION_COUNT on attempt {attempt + 1}, retrying...")
+
+        self.logger.error("[download_mission_test] FAILED: No MISSION_COUNT after 5 attempts")
+        raise TimeoutError("No mission data received")
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
     # --------------------------------------------------
