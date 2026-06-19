@@ -916,8 +916,8 @@ class MAVBridge:
 
         mission_request_list_message = mu.mavlink.MAVLink_mission_request_list_message(
             self.target_system,
-            self.target_component,
-            mu.mavlink.MAV_MISSION_TYPE_MISSION
+            self.target_component#,
+            #mu.mavlink.MAV_MISSION_TYPE_MISSION
         )
 
         self._write(mission_request_list_message)
