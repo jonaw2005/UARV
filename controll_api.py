@@ -26,6 +26,8 @@ logging.basicConfig(
 started = False
 running = True
 
+#edit
+
 def start_background():
     global started
     global running
