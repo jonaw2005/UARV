@@ -812,8 +812,9 @@ class MAVBridge:
             if count == 0:
                 return []
 
-            # Give Pixhawk a moment to prepare for item requests
-            time.sleep(2.0)
+            # ArduPlane needs time to load mission from flash after MISSION_COUNT.
+            # Without this delay it re-sends seq 0 for every request.
+            time.sleep(5.0)
 
             self.logger.info(
                 f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
@@ -870,9 +871,9 @@ class MAVBridge:
                 if item.seq == seq:
                     mission.append(item.to_dict())
                 else:
-                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, retrying...")
+                    # Pixhawk sent wrong seq — discard and re-request same seq
+                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, re-requesting...")
                     time.sleep(0.5)
-                    # Re-request this seq
                     seq -= 1
                     continue
 
@@ -919,8 +920,9 @@ class MAVBridge:
             if count == 0:
                 return []
 
-            # Give Pixhawk a moment to prepare for item requests
-            time.sleep(2.0)
+            # ArduPlane needs time to load mission from flash after MISSION_COUNT.
+            # Without this delay it re-sends seq 0 for every request.
+            time.sleep(5.0)
 
             self.logger.info(
                 f"Downloading items from sys={self.master.target_system} comp={self.master.target_component}"
@@ -977,9 +979,9 @@ class MAVBridge:
                 if item.seq == seq:
                     mission.append(self._parse_mission_item(item, seq=seq))
                 else:
-                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, retrying...")
+                    # Pixhawk sent wrong seq — discard and re-request same seq
+                    self.logger.warning(f"Got seq {item.seq} instead of {seq}, re-requesting...")
                     time.sleep(0.5)
-                    # Re-request this seq
                     seq -= 1
                     continue
 
