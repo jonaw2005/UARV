@@ -56,6 +56,14 @@ body {
   justify-content: space-between;
 }
 
+.header-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
 .panel-header h1 {
   margin: 0;
   font-size: 1.05rem;

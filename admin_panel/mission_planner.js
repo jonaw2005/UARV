@@ -257,10 +257,6 @@ function updateActionFields() {
       label = 'No parameters';
       placeholder = '';
       break;
-    case 'change_alt':
-      label = 'Target altitude (m)';
-      placeholder = '120';
-      break;
     case 'delay':
       label = 'Delay seconds';
       placeholder = '10';
@@ -286,9 +282,9 @@ function updateActionFields() {
   actionParam.placeholder = placeholder;
   actionParam.step = step;
   actionParam.value = '';
-  actionParam.disabled = action === 'rtl' || action === 'land';
-  actionParam.style.display = action === 'rtl' || action === 'land' ? 'none' : 'block';
-  actionParamLabel.style.display = action === 'rtl' || action === 'land' ? 'none' : 'grid';
+  actionParam.disabled = action === 'rtl' || action === 'land' || action === 'land_start';
+  actionParam.style.display = action === 'rtl' || action === 'land' || action === 'land_start' ? 'none' : 'block';
+  actionParamLabel.style.display = action === 'rtl' || action === 'land' || action === 'land_start' ? 'none' : 'grid';
 }
 
 addWaypointBtn.addEventListener('click', () => {
@@ -331,7 +327,6 @@ placeActionBtn.addEventListener('click', () => {
     loiter: `Loiter for ${param || '0'} s`,
     rtl: 'Return to Launch',
     land: 'Land',
-    change_alt: `Change altitude to ${param || 'auto'} m`,
     delay: `Delay ${param || '0'} s`,
     set_speed: `Set speed to ${param || '0'} m/s`,
     condition_yaw: `Condition yaw to ${param || '0'}°`,
@@ -465,7 +460,6 @@ function loadMissionFromJSON(missionData) {
     loiter: (p) => `Loiter for ${p || '0'} s`,
     rtl: () => 'Return to Launch',
     land: () => 'Land',
-    change_alt: (p) => `Change altitude to ${p || 'auto'} m`,
     delay: (p) => `Delay ${p || '0'} s`,
     set_speed: (p) => `Set speed to ${p || '0'} m/s`,
     condition_yaw: (p) => `Condition yaw to ${p || '0'}°`,
