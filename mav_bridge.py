@@ -774,9 +774,9 @@ class MAVBridge:
             mu.mavlink.MAV_MISSION_TYPE_MISSION
         )
 
-        msg = self._read_message("MISSION_COUNT", timeout=timeout)
+        msg = self._read("MISSION_COUNT", timeout=timeout)
         if not msg:
-            logger.error("Failed to get MISSION_COUNT from Pixhawk.")
+            self.logger.error("Failed to get MISSION_COUNT from Pixhawk.")
             return None
 
         num_items = msg.count
