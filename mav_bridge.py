@@ -1118,6 +1118,7 @@ class MAVBridge:
 
 
 if __name__ == "__main__":
+    pass
     #bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
     #bridge.connect()
     #bridge.logger.info("Connected, requesting parameters...")
