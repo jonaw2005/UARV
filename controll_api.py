@@ -474,7 +474,7 @@ def upload_mission():
     if not data or "mission" not in data:
         return jsonify({"error": "missing mission"}), 400
 
-    mission_json = sorted(data["mission"], key=lambda x: x["seq"])
+    mission_json = sorted(data["mission"], key=lambda x: int(x["seq"]))
 
     mav_items = translate_mission(mission_json)
     logging.info("Translated MAVLink items: %s", mav_items)
