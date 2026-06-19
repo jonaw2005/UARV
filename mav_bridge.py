@@ -48,9 +48,10 @@ class MAVBridge:
         self._latest, releases lock, and returns the message.
         """
         with self._master_lock:
-            msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+            msg = self.master.recv_match(blocking=True, timeout=timeout)
             self._latest.value = msg
-            return msg
+            if msg and msg.get_type() in msg_type:
+                return msg
         
     def _write(self, msg, log: bool = True):
         """Single threaded mav.send wrapper."""
