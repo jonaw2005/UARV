@@ -507,7 +507,8 @@ function exportMissionToJSON() {
 
 uploadMissionBtn.addEventListener('click', async () => {
   const missionJSON = missionToMAVLink(exportMissionToJSON());
-  console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
+  //console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
+  console.log('Mission JSON:', JSON.stringify(missionJSON));
   try {
     const response = await fetch('http://192.168.0.105/api/mission_upload', {
       method: 'POST',
