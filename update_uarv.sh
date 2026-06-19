@@ -191,47 +191,43 @@ info "Starting deployment..."
 
 section "STOP UARV API (WEBSOCKET SAFE)"
 
-if ! $NO_RESTART; then
-    info "Stopping service gracefully..."
+info "Stopping service gracefully..."
 
-    sudo systemctl stop uarv-api
+sudo systemctl stop uarv-api
 
-    TIMEOUT=15
-    COUNTER=0
+TIMEOUT=15
+COUNTER=0
 
-    while systemctl is-active --quiet uarv-api; do
-        sleep 1
-        COUNTER=$((COUNTER+1))
+while systemctl is-active --quiet uarv-api; do
+    sleep 1
+    COUNTER=$((COUNTER+1))
 
-        if [ $COUNTER -ge $TIMEOUT ]; then
-            error "Graceful stop timeout"
-            break
-        fi
-    done
-
-    if systemctl is-active --quiet uarv-api; then
-        error "Forcing SIGTERM..."
-        sudo systemctl kill -s SIGTERM uarv-api
-        sleep 5
+    if [ $COUNTER -ge $TIMEOUT ]; then
+        error "Graceful stop timeout"
+        break
     fi
+done
 
-    if systemctl is-active --quiet uarv-api; then
-        error "Forcing SIGKILL..."
-        sudo systemctl kill -s SIGKILL uarv-api
-        sleep 2
-    fi
-
-    if systemctl is-active --quiet uarv-api; then
-        error "Cannot stop service"
-        progress_bar 100
-        echo ""
-        exit 1
-    fi
-
-    success "uarv-api fully stopped"
-else
-    info "Skipping uarv-api stop due to --no-restart flag."
+if systemctl is-active --quiet uarv-api; then
+    error "Forcing SIGTERM..."
+    sudo systemctl kill -s SIGTERM uarv-api
+    sleep 5
 fi
+
+if systemctl is-active --quiet uarv-api; then
+    error "Forcing SIGKILL..."
+    sudo systemctl kill -s SIGKILL uarv-api
+    sleep 2
+fi
+
+if systemctl is-active --quiet uarv-api; then
+    error "Cannot stop service"
+    progress_bar 100
+    echo ""
+    exit 1
+fi
+
+success "uarv-api fully stopped"
 
 # --------------------------------------------------
 # REPOSITORY
