@@ -51,6 +51,13 @@ class MAVBridge:
             msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
             self._latest.value = msg
             return msg
+        
+    def _write(self, msg, log: bool = True):
+        """Single threaded mav.send wrapper."""
+        with self._master_lock:
+            if log:
+                self.logger.debug(f"Sending message: {msg}")
+            self.master.mav.send(msg)
 
     def connect(self, timeout=30):
         self.master = mu.mavlink_connection(
@@ -658,6 +665,101 @@ class MAVBridge:
  # --------------------------------------------------
     # PUBLIC: Mission Upload Entry Point
     # --------------------------------------------------
+
+    def upload_mission_test(self, mission_items):
+        num_items = len(mission_items)
+        self.logger.info(f"Uploading mission with {num_items} items.")
+
+        self.logger.info("Clearing existing mission...")
+
+        clear_msg = self.master.mav.mission_clear_all_message(
+            self.target_system,
+            self.target_component
+        )
+
+        self._write(clear_msg, log=True)
+
+        ack = self._read_message("MISSION_ACK")
+
+        if not ack or ack.type != mu.mavlink.MAV_RESULT_ACCEPTED:
+            self.logger.error(f"Failed to clear mission: {ack.type if ack else 'No ACK'}")
+            return False
+        self.logger.info("Mission cleared successfully.")
+        time.sleep(0.5) # Give Pixhawk time to process
+
+        mission_count_msg = self.master.mav.mission_count_message(
+            self.target_system,
+            self.target_component,
+            num_items,
+            mu.mavlink.MAV_MISSION_TYPE_MISSION # Mission type
+        )
+
+        self._write(mission_count_msg, log=True)
+
+        uploaded_count = 0
+        while uploaded_count < num_items:
+            msg = self._read(["MISSION_REQUEST", "MISSION_REQUEST_INT"])
+
+            if not msg:
+                self.logger.warning("No MISSION_REQUEST received, resending MISSION_COUNT.")
+                
+                mission_count_msg = self.master.mav.mission_count_message(
+                    self.target_system,
+                    self.target_component,
+                    num_items,
+                    mu.mavlink.MAV_MISSION_TYPE_MISSION # Mission type
+                )
+                
+                self._write(mission_count_msg, log=True)
+                continue
+
+            
+            seq_to_send = msg.seq
+            self.logger.info(f"Received MISSION_REQUEST for sequence {seq_to_send}")
+
+            if seq_to_send != uploaded_count:
+                self.logger.error(f"Unexpected mission request sequence: expected {uploaded_count}, got {seq_to_send}. Aborting upload.")
+                return False
+
+            item = mission_items[seq_to_send]
+
+            mission_item_msg = self.master.mav.mission_item_int_message(
+                self.target_system,
+                self.target_component,
+                seq_to_send,
+                item["frame"],
+                item["command"],
+                item.get("current", 0),
+                item.get("autocontinue", 1),
+                item.get("param1", 0),
+                item.get("param2", 0),
+                item.get("param3", 0),
+                item.get("param4", 0),
+                item.get("x", 0),
+                item.get("y", 0),
+                item.get("z", 0),
+            )
+
+            self._write(mission_item_msg, log=True)
+
+            self.logger.info(f"Sent MISSION_ITEM_INT seq={seq_to_send}")
+
+            uploaded_count += 1
+            time.sleep(0.1) # Small delay to avoid overwhelming the Pixhawk
+
+
+        self.logger.info("All mission items sent. Waiting for final MISSION_ACK.")
+        ack = self._read("MISSION_ACK", timeout=10)
+        if ack and ack.type == mu.mavlink.MAV_RESULT_ACCEPTED:
+            self.logger.info("Mission upload successful!")
+            return True
+        else:
+            self.logger.error(f"Mission upload failed: {ack.type if ack else 'No ACK'}")
+            return False
+
+
+
+
     def upload_mission(self, mission_items):
         """
         mission_items = already translated MAVLink-ready list
@@ -758,6 +860,10 @@ class MAVBridge:
             item.get("alt", 0)
         )
 
+
+
+
+# download_mission_test_2 is working
 
     def download_mission_test_2(self, timeout=10):
         """Downloads the mission from the Pixhawk and returns a list of items."""

@@ -492,7 +492,7 @@ def upload_mission():
     logging.info("Translated MAVLink items: %s", mav_items)
 
     try:
-        future = run_task(bridge.upload_mission, mav_items)
+        future = run_task(bridge.upload_mission_test, mav_items)
         response = future.result(timeout=30)
         return jsonify({
             "status": "upload_complete",
