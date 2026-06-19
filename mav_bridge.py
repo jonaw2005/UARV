@@ -1118,11 +1118,11 @@ class MAVBridge:
 
 
 if __name__ == "__main__":
-    bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
-    bridge.connect()
-    bridge.logger.info("Connected, requesting parameters...")
+    #bridge = MAVBridge("/dev/ttyAMA0", baud=57600)
+    #bridge.connect()
+    #bridge.logger.info("Connected, requesting parameters...")
     #params = bridge.get_all_params()
     #bridge.logger.info(f"Got parameters: {params}")
-    bridge.logger.info("Requesting single parameter...")
-    param_value = bridge.get_param("GPS_RAW_DATA")
-    bridge.logger.info(f"Got parameter: {param_value}")
+    #bridge.logger.info("Requesting single parameter...")
+    #param_value = bridge.get_param("GPS_RAW_DATA")
+    #bridge.logger.info(f"Got parameter: {param_value}")
