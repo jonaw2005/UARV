@@ -506,7 +506,7 @@ def upload_mission():
 def download_mission():
     try:
         future = run_task(bridge.download_mission_test)
-        result = future.result(timeout=30)
+        result = future.result(timeout=35)
         return jsonify(result), 200
     except Exception as e:
         logging.error(f"Mission download failed: {e}")
