@@ -711,9 +711,14 @@ class MAVBridge:
                 seq = msg.seq
                 self.logger.info(f"Received request for seq {seq}/{count}")
 
-                # If the autopilot requests an item we already sent, skip stale
+                # If the autopilot requests an item we already sent, it likely
+                # reset its buffer (e.g. after mission_clear_all). Re-send it.
                 if seq < uploaded:
-                    self.logger.debug(f"Skipping stale request for seq {seq}")
+                    self.logger.warning(
+                        f"Pixhawk requested seq {seq} again (buffer reset?), re-sending"
+                    )
+                    item = mission_items[seq]
+                    self._send_mission_item(seq, item)
                     continue
 
                 # If seq jumped ahead, we can't handle that — abort
