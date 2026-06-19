@@ -19,8 +19,8 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(message)s"
+    level=logging.DEBUG,
+    format="[%(levelname)s]: %(asctime)s - %(message)s"
 )
 
 started = False
