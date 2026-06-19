@@ -365,12 +365,13 @@ def translate_mission(json_mission):
     items = []
 
     for item in json_mission:
-
+        seq = int(item.get("seq", 0))
         t = item["type"]
 
         # ---------------- WAYPOINT ----------------
         if t == "waypoint":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
                 "lat": int(item["lat"] * 1e7),
@@ -381,6 +382,7 @@ def translate_mission(json_mission):
         # ---------------- TAKEOFF ----------------
         elif t == "action" and item["action"] == "takeoff":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                 "command": mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
                 "alt": float(item["param"])
@@ -389,6 +391,7 @@ def translate_mission(json_mission):
         # ---------------- LOITER ----------------
         elif t == "action" and item["action"] == "loiter":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
                 "param1": float(item["param"])
@@ -397,6 +400,7 @@ def translate_mission(json_mission):
         # ---------------- RTL ----------------
         elif t == "action" and item["action"] == "rtl":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH
             })
@@ -404,6 +408,7 @@ def translate_mission(json_mission):
         # ---------------- LAND ----------------
         elif t == "action" and item["action"] == "land":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_NAV_LAND
             })
@@ -411,6 +416,7 @@ def translate_mission(json_mission):
         # ---------------- SPEED ----------------
         elif t == "action" and item["action"] == "set_speed":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED,
                 "param1": 0,
@@ -420,6 +426,7 @@ def translate_mission(json_mission):
         # ---------------- ALT CHANGE ----------------
         elif t == "action" and item["action"] == "change_alt":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_DO_CHANGE_ALTITUDE,
                 "param1": float(item["param"])
@@ -428,6 +435,7 @@ def translate_mission(json_mission):
         # ---------------- DELAY ----------------
         elif t == "action" and item["action"] == "delay":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_NAV_DELAY,
                 "param1": float(item["param"])
@@ -436,6 +444,7 @@ def translate_mission(json_mission):
         # ---------------- YAW ----------------
         elif t == "action" and item["action"] == "condition_yaw":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_CONDITION_YAW,
                 "param1": float(item["param"])
@@ -444,11 +453,13 @@ def translate_mission(json_mission):
         # ---------------- LAND START ----------------
         elif t == "action" and item["action"] == "land_start":
             items.append({
+                "seq": seq,
                 "frame": mavutil.mavlink.MAV_FRAME_MISSION,
                 "command": mavutil.mavlink.MAV_CMD_DO_LAND_START
             })
 
-    # sort by seq (important)
+    # sort by seq (important) — ensures correct order regardless of input order
+    items.sort(key=lambda x: x["seq"])
     logging.info(f"Translated {len(items)} mission items")
     return items
 
