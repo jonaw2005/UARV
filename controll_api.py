@@ -518,7 +518,7 @@ def download_mission():
 @app.route("/mission_download_raw", methods=["GET"])
 def download_mission_raw():
     try:
-        future = run_task(bridge.download_mission_raw)
+        future = run_task(bridge.download_mission_test)
         raw = future.result(timeout=30)
         return jsonify({
             "mission": raw
