@@ -505,11 +505,9 @@ def upload_mission():
 @app.route("/mission_download", methods=["GET"])
 def download_mission():
     try:
-        future = run_task(bridge.download_mission)
-        mission = future.result(timeout=30)
-        return jsonify({
-            "mission": mission
-        }), 200
+        future = run_task(bridge.download_mission_test)
+        result = future.result(timeout=30)
+        return jsonify(result), 200
     except Exception as e:
         logging.error(f"Mission download failed: {e}")
         return jsonify({'error': str(e)}), 500

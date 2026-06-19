@@ -831,7 +831,7 @@ class MAVBridge:
                 raise TimeoutError(f"No mission item for seq {seq}")
 
         self.logger.info(f"[download_mission_test] Downloaded {len(mission_items)}/{count} items")
-        return mission_items
+        return {"count": count, "mission": mission_items}
     # --------------------------------------------------
     # DOWNLOAD MISSION FROM AUTOPILOT (raw MAVLink messages)
     # --------------------------------------------------
@@ -1147,17 +1147,23 @@ class MAVBridge:
             self.logger.info(f"[download_mission] All {count} items downloaded in {total_download_time:.2f}s")
 
             # -------------------------------------------------
-            # 4. Wait for ACK
+            # 4. Wait for ACK (non-blocking with retries)
             # -------------------------------------------------
             self.logger.debug("[download_mission] Waiting for MISSION_ACK...")
-            ack = self._read(msg_type="MISSION_ACK", timeout=timeout)
+            ack = None
+            for ack_attempt in range(5):
+                # Release lock between attempts so health loop can run
+                time.sleep(0.5)
+                ack = self._read(msg_type="MISSION_ACK", timeout=1)
+                if ack:
+                    ack_type = getattr(ack, "type", None)
+                    ack_result = getattr(ack, "result", None)
+                    self.logger.info(f"[download_mission] Received MISSION_ACK on attempt {ack_attempt + 1}: type={ack_type}, result={ack_result}")
+                    break
+                self.logger.debug(f"[download_mission] No MISSION_ACK yet (attempt {ack_attempt + 1}/5), retrying...")
 
-            if ack:
-                ack_type = getattr(ack, "type", None)
-                ack_result = getattr(ack, "result", None)
-                self.logger.info(f"[download_mission] Received MISSION_ACK: type={ack_type}, result={ack_result}")
-            else:
-                self.logger.warning("[download_mission] No MISSION_ACK received (timeout)")
+            if not ack:
+                self.logger.warning("[download_mission] No MISSION_ACK received after 5 attempts — returning mission data anyway")
 
             result = {
                 "count": count,
