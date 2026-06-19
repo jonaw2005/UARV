@@ -17,7 +17,7 @@ class MAVBridge:
 
         connection_string: e.g. 'udp:127.0.0.1:14550' or 'COM3' or '/dev/ttyUSB0'
         """
-        self.logger.debug(f"__init__")
+        #self.logger.debug(f"__init__")
         self.connection_string = connection_string
         self.baud = baud
         self.master = None
