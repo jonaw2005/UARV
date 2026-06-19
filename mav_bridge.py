@@ -38,7 +38,7 @@ class MAVBridge:
             'last_heartbeat': None,
             'system_status': None,
         }
-        self._health_thread = None
+        self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
 
         self.logger = logging.getLogger("MAVBridge")
 
@@ -62,7 +62,7 @@ class MAVBridge:
 
         #return self._read(msg_type=msg_type, timeout=timeout)
 
-    def _read(self, msg_type=None, timeout=10.0):
+    def _read1(self, msg_type=None, timeout=5):
         """Single threaded recv_match wrapper.
 
         Acquires _master_lock, calls recv_match, caches result in thread-local
@@ -71,16 +71,28 @@ class MAVBridge:
         self.logger.debug(f"_read")
         
         self.logger.debug(f"trying to find message {msg_type}")
-        #msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
-        msg = self.master.recv_match(type=msg_type, blocking=True)
+        msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+        #msg = self.master.recv_match(type=msg_type, blocking=True)
         self.logger.debug(f"found message {msg.get_type()}")
-        self._latest.value = msg
-        if msg and (msg.get_type() in msg_type):
+        #self._latest.value = msg
+        if msg:# and (msg.get_type() in msg_type):
             return msg
         else:
             return None
 
         #return self._read(msg_type=msg_type, timeout=timeout)
+
+    def _read(self, msg_type=None, timeout=5.0):
+        """Read a MAVLink message of the given type(s)."""
+        with self._master_lock:
+            msg = self.master.recv_match(type=msg_type, blocking=True, timeout=timeout)
+        if msg is None:
+            return None
+        # `msg_type` can be a string or a list/tuple
+        if isinstance(msg_type, (list, tuple)):
+            return msg if msg.get_type() in msg_type else None
+        else:
+            return msg if msg.get_type() == msg_type else None
         
     def _write(self, msg, log: bool = True):
         """Single threaded mav.send wrapper."""
@@ -99,9 +111,12 @@ class MAVBridge:
             source_system=self.source_system,
             autoreconnect=True,
         )
+        self.master.wait_heartbeat()
         # mark connected and start background health thread
         self.health['connected'] = True
         self.running = True
+        self.target_system = self.master.target_system
+        self.target_component = self.master.target_component
         #self._health_thread = threading.Thread(target=self._health_loop, daemon=True)
         #self._health_thread.start()
 
@@ -784,7 +799,7 @@ class MAVBridge:
 
         self._write(clear_msg, log=True)
 
-        ack = self._read("MISSION_ACK")
+        ack = self._read("MISSION_ACK", timeout=10)
 
         self.logger.debug(f"Received ack {ack}")
 
@@ -862,9 +877,8 @@ class MAVBridge:
         if ack and ack.type == mu.mavlink.MAV_RESULT_ACCEPTED:
             self.logger.info("Mission upload successful!")
             return True
-        else:
-            self.logger.error(f"Mission upload failed: {ack.type if ack else 'No ACK'}")
-            return False
+        self.logger.error(f"Mission upload failed: {ack.type if ack else 'No ACK'}")
+        return False
 
 
     # --------------------------------------------------
