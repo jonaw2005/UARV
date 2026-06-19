@@ -780,10 +780,10 @@ class MAVBridge:
         (no translation / parsing — original MAVLink field names).
         """
         with self._master_lock:
-
             mission = []
 
-            # 1. Request Mission List (with retry)
+            # 1. Request Mission List (with retry, lock released between attempts)
+            msg = None
             for attempt in range(3):
                 self.master.mav.mission_request_list_send(
                     self.master.target_system,
@@ -800,7 +800,9 @@ class MAVBridge:
                     break
 
                 self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
-            else:
+                time.sleep(0.5)
+
+            if not msg:
                 raise TimeoutError("No MISSION_COUNT received after 3 attempts")
 
             count = msg.count
@@ -812,6 +814,7 @@ class MAVBridge:
 
             # 2. Request each item by seq, return raw message as dict
             for seq in range(count):
+                item = None
                 for attempt in range(3):
                     self.master.mav.mission_request_int_send(
                         self.master.target_system,
@@ -827,6 +830,7 @@ class MAVBridge:
 
                     if not item:
                         self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
+                        time.sleep(0.3)
                         continue
 
                     if item.seq == seq:
@@ -836,6 +840,7 @@ class MAVBridge:
                     self.logger.debug(
                         f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
                     )
+                    time.sleep(0.3)
                 else:
                     raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
 
@@ -850,10 +855,10 @@ class MAVBridge:
         und gibt sie als strukturierte Liste zurück
         """
         with self._master_lock:
-
             mission = []
 
-            # 1. Request Mission List (with retry)
+            # 1. Request Mission List (with retry, lock released between attempts)
+            msg = None
             for attempt in range(3):
                 self.master.mav.mission_request_list_send(
                     self.master.target_system,
@@ -870,7 +875,9 @@ class MAVBridge:
                     break
 
                 self.logger.warning(f"MISSION_COUNT not received (attempt {attempt + 1}/3)")
-            else:
+                time.sleep(0.5)
+
+            if not msg:
                 raise TimeoutError("No MISSION_COUNT received after 3 attempts")
 
             count = msg.count
@@ -882,6 +889,7 @@ class MAVBridge:
 
             # 2. Items einzeln anfordern (mit Seq-Check gegen veraltete/versetzte Messages)
             for seq in range(count):
+                item = None
                 for attempt in range(3):
                     self.master.mav.mission_request_int_send(
                         self.master.target_system,
@@ -897,6 +905,7 @@ class MAVBridge:
 
                     if not item:
                         self.logger.warning(f"No mission item for seq {seq} (attempt {attempt + 1}/3)")
+                        time.sleep(0.3)
                         continue
 
                     if item.seq == seq:
@@ -907,6 +916,7 @@ class MAVBridge:
                     self.logger.debug(
                         f"Discarding out-of-order mission item (got seq {item.seq}, expected {seq})"
                     )
+                    time.sleep(0.3)
                 else:
                     raise TimeoutError(f"No mission item for seq {seq} after 3 attempts")
 
