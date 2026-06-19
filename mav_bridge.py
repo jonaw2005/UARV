@@ -1045,8 +1045,7 @@ class MAVBridge:
                 while time.time() - t0 < timeout:
                     msg = self.master.recv_match(
                         type="MISSION_ITEM_INT",
-                        blocking=True,
-                        timeout=1
+                        blocking=True
                     )
 
                     if msg and msg.seq == seq:
