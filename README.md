@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛩️ UARV — Unmanned Aerial Reconnaisance Vehicle
+# 🛩️ UARV — Unmanned Aerial Reconnaissance Vehicle
 
 **A full-stack MAVLink ground control system for ArduPilot/PX4-based drones**
 
