@@ -7,7 +7,7 @@ let lat = null;
 let lon = null;
 
 async function get_Location() {
-  const url = 'http://192.168.0.105/api/get_telemetry';
+  const url = `${API_BASE}/get_telemetry`;
 
   try {
     const response = await fetch(url, { cache: 'no-store' });
@@ -202,7 +202,7 @@ function showTelemetryWindow(data) {
 const telemetryBtn = document.getElementById('telemetryBtn');
 if (telemetryBtn) {
   telemetryBtn.addEventListener('click', async () => {
-    const url = 'http://192.168.0.105/api/get_telemetry';
+    const url = `${API_BASE}/get_telemetry`;
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -434,7 +434,7 @@ function showMissionWindow(missionData) {
 const downloadMissionBtn = document.getElementById('downloadMissionBtn');
 if (downloadMissionBtn) {
   downloadMissionBtn.addEventListener('click', async () => {
-    const url = 'http://192.168.0.105/api/mission_download';
+    const url = `${API_BASE}/mission_download`;
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

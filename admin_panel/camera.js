@@ -4,7 +4,8 @@ const cameraState = document.getElementById('cameraState');
 const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraUrl = document.getElementById('cameraUrl');
 
-const SOCKET_SERVER = 'http://192.168.0.105:5000';
+// Socket.IO connects to the same origin as the page
+const SOCKET_SERVER = window.location.origin;
 
 function setCameraStatus(connected) {
   cameraStatus.textContent = connected ? 'Live' : 'Offline';

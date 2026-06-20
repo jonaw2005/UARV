@@ -510,7 +510,7 @@ uploadMissionBtn.addEventListener('click', async () => {
   //console.log('Mission JSON:', JSON.stringify(missionJSON, null, 2));
   console.log('Mission JSON:', JSON.stringify(missionJSON));
   try {
-    const response = await fetch('http://192.168.0.105/api/mission_upload', {
+    const response = await fetch(`${API_BASE}/mission_upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(missionJSON),
@@ -584,15 +584,17 @@ function loadMissionFromJSON(missionData) {
 
 async function downloadMission() {
   try {
-    const response = await fetch('http://192.168.0.105/api/mission_download');
+    const response = await fetch(`${API_BASE}/mission_download`);
     if (!response.ok) {
       alert(`Download failed with status ${response.status}`);
       return;
     }
     const result = await response.json();
-    if (result.mission && result.mission.length > 0) {
-      loadMissionFromJSON(result.mission);
-      alert(`Mission downloaded: ${result.mission.length} item(s).`);
+    // API now returns a flat array directly (not wrapped in {mission: [...]})
+    const missionData = Array.isArray(result) ? result : (result?.mission || []);
+    if (missionData.length > 0) {
+      loadMissionFromJSON(missionData);
+      alert(`Mission downloaded: ${missionData.length} item(s).`);
     } else {
       alert('No mission items on Pixhawk.');
     }

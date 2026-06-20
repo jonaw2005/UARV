@@ -1,7 +1,7 @@
 const actionButtons = Array.from(document.querySelectorAll('.action-btn'));
 
 // ── API helper ──────────────────────────────────────────────────────────────
-const API_BASE = 'http://192.168.0.105/api';
+// API_BASE is defined in config.js (loaded before this file)
 
 async function apiPost(endpoint, body = {}) {
   try {
