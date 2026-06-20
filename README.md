@@ -10,6 +10,7 @@
 ![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?style=for-the-badge&logo=leaflet&logoColor=white)
 ![MAVLink](https://img.shields.io/badge/MAVLink-2.0-FF6B35?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cGF0aCBkPSJNMzIgMkwyIDU0aDYweiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjQiLz48L3N2Zz4=&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?style=for-the-badge&logo=raspberry-pi&logoColor=white)
+![NGINX](https://img.shields.io/badge/NGINX-1.24-009639?style=for-the-badge&logo=nginx&logoColor=white)
 
 ---
 
@@ -79,19 +80,19 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Raspberry Pi (onboard)                    │
+│                    Raspberry Pi (onboard)                   │
 │                                                             │
 │  ┌──────────────────┐    ┌──────────────────────────────┐   │
-│  │  controll_api.py  │◄──►│        mav_bridge.py         │   │
-│  │  (Flask + Socket) │    │   (pymavlink MAVLink bridge) │   │
+│  │  controll_api.py │◄──►│        mav_bridge.py         │   │
+│  │  (Flask + Socket)│    │   (pymavlink MAVLink bridge) │   │
 │  └──────┬───────────┘    └──────────┬───────────────────┘   │
-│         │                           │                        │
-│         │ HTTP/WS                   │ UART (921600 baud)     │
-│         ▼                           ▼                        │
-│  ┌──────────────┐          ┌──────────────┐                  │
-│  │  Web Browser │          │   Pixhawk    │                  │
-│  │  (Admin UI)  │          │  (ArduPilot) │                  │
-│  └──────────────┘          └──────────────┘                  │
+│         │                           │                       │
+│         │ HTTP/WS                   │ UART (921600 baud)    │
+│         ▼                           ▼                       │
+│  ┌──────────────┐          ┌──────────────┐                 │
+│  │  Web Browser │          │   Pixhawk    │                 │
+│  │  (Admin UI)  │          │  (ArduPilot) │                 │
+│  └──────────────┘          └──────────────┘                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
