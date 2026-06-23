@@ -15,7 +15,7 @@ logging.basicConfig(
 from mav_bridge import MAVBridge
 
 PORT = "/dev/ttyAMA0"
-BAUD = 57600
+BAUD = 921600
 TIMEOUT = 5
 
 passed = 0
