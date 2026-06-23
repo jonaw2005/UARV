@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UARV — Wie es funktioniert (Einfache Version)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      margin: 0;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      color: #2b6cb0;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+    }
+    .box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .box h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #2d3748;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .big-text {
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      padding: 15px;
+      background: #ebf8ff;
+      border-radius: 8px;
+      color: #2b6cb0;
+      margin: 15px 0;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px;
+      margin: 8px 0;
+      background: #f7fafc;
+      border-radius: 8px;
+      border-left: 4px solid #4299e1;
+    }
+    .step-num {
+      background: #4299e1;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .step-text {
+      font-size: 1.05rem;
+    }
+    footer {
+      text-align: center;
+      color: #a0aec0;
+      font-size: 0.85rem;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>UARV — Wie es funktioniert</h1>
+  <p class="subtitle">Die einfachste Erklärung möglich. Kein Fachjargon.</p>
+
+  <!-- ===== DAS GROSSE GANZE ===== -->
+  <div class="box">
+    <h2>🎯 Das große Ganze (3 Dinge)</h2>
+    <div class="mermaid">
+    graph LR
+      A["👤 DU<br/>(am Laptop/Handy)"] -->|"Webseite öffnen"| B["🖥️ WEBSEITE<br/>(das Dashboard)"]
+      B -->|"Knöpfe drücken<br/>(starten, fliegen…)"| C["🐍 PYTHON-SERVER<br/>(läuft auf Raspberry Pi)"]
+      C -->|"Sendet Befehle"| D["🚁 Flugzeug<br/>(Pixhawk Autopilot)"]
+      D -->|"Macht was du sagst"| E["✈️ FLIEGT"]
+    </div>
+  </div>
+
+  <!-- ===== SCHRITT FÜR SCHRITT ===== -->
+  <div class="box">
+    <h2>📋 Schritt für Schritt: Was passiert wenn du "Starten" drückst</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Du öffnest <strong>http://raspberrypi:8000</strong> in deinem Browser. Du siehst eine Karte, einen Live-Video-Feed und Knöpfe.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Du klickst auf <strong>"ARM"</strong>. Die Webseite sendet eine Nachricht an den Python-Server: "Flugzeug startbereit machen."</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Der Python-Server spricht mit dem Pixhawk (dem Gehirn des Flugzeugs) über ein Kabel und sagt "ARM."</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Du klickst auf <strong>"START"</strong>. Die Webseite sagt es dem Server. Der Server sagt dem Pixhawk: "Fliege 50 Meter hoch."</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-text">Die Motoren des Flugzeugs drehen sich und es fliegt los. Die Kamera an der Flugzeug streamt das Video live zurück in deinen Browser.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-text">Du siehst das Flugzeug sich auf der Karte bewegen. Du kannst jederzeit "RTL" (Zurück zum Start) drücken, damit das Flugzeug zurückkommt.</div>
+    </div>
+  </div>
+
+  <!-- ===== DIE 3 DATEIEN DIE ZÄHLEN ===== -->
+  <div class="box">
+    <h2>📁 Die 3 Dateien die wirklich zählen</h2>
+    <div class="mermaid">
+    graph TB
+      subgraph BACKEND["🐍 Läuft auf dem Raspberry Pi"]
+        API["controll_api.py<br/>━━━━━━━━━━━━━━━━━━<br/>Das GEHIRN des Systems<br/>• Flask-Webserver (Port 8000)<br/>• REST API + SocketIO für Video<br/>• Empfängt Knopfklicks vom Browser<br/>• Sendet Befehle an die Flugzeug<br/>• Streamt Kameravideo zurück"]
+        BRIDGE["mav_bridge.py<br/>━━━━━━━━━━━━━━━━━━<br/>Der ÜBERSETZER<br/>• Wandelt einfache Befehle in MAVLink um<br/>• Spricht das native Protokoll des Flugzeugs<br/>• Verwaltet Starten, Modi, Wegpunkte,<br/>  Telemetrie, Missionen"]
+      end
+
+      subgraph FRONTEND["🖥️ Läuft in deinem Browser"]
+        WEB["admin_panel/index.html<br/>━━━━━━━━━━━━━━━━━━<br/>Das DASHBOARD<br/>• Karte wo das Flugzeug ist<br/>• Kamerabild (SocketIO)<br/>• Knöpfe (Start, Landen, Modus…)"]
+      end
+
+      WEB -->|"Knopfklick → HTTP-Anfrage"| API
+      API -->|"Ruft Bridge-Methode auf"| BRIDGE
+      BRIDGE -->|"MAVLink über UART-Kabel"| DRONE["🚁 Pixhawk (am Flugzeug)"]
+
+      style API fill:#4299e1,color:#fff,stroke:#2b6cb0,stroke-width:3px
+      style BRIDGE fill:#48bb78,color:#fff,stroke:#2f855a,stroke-width:2px
+      style WEB fill:#ed8936,color:#fff,stroke:#c05621,stroke-width:3px
+      style DRONE fill:#e53e3e,color:#fff,stroke:#c53030,stroke-width:2px
+    </div>
+  </div>
+
+  <!-- ===== DIE API ===== -->
+  <div class="box">
+    <h2>🔌 Die API — Wie der Browser mit dem Flugzeug spricht</h2>
+    <p style="color:#4a5568; margin-top:0;">Der Python-Server (<code>controll_api.py</code>) stellt eine Reihe von Web-Adressen (Endpunkte) bereit. Dein Browser ruft sie auf, um das Flugzeug zu steuern.</p>
+    <div class="mermaid">
+    graph LR
+      subgraph BROWSER["Browser (buttons.js, map.js, camera.js)"]
+        BTN["buttons.js"]
+        MAP["map.js"]
+        CAM["camera.js"]
+      end
+
+      subgraph API_ENDPOINTS["REST API (controll_api.py)"]
+        A1["/api/arm<br/>/api/disarm"]
+        A2["/api/takeoff"]
+        A3["/api/change_flightmode<br/>POST {mode: 'AUTO'}"]
+        A4["/api/goto<br/>POST {lat, lon, alt}"]
+        A5["/api/set_velocity<br/>POST {vx, vy, vz}"]
+        A6["/api/mission_upload<br/>POST [wegpunkte]"]
+        A7["/api/mission_download"]
+        A8["/api/get_telemetry<br/>(GPS, Akku, Lage…)"]
+        A9["/video<br/>(MJPEG Stream)"]
+        A10["SocketIO /video_frame<br/>(base64 JPEG ~30fps)"]
+      end
+
+      BTN -->|"GET /api/arm"| A1
+      BTN -->|"GET /api/takeoff"| A2
+      BTN -->|"POST /api/change_flightmode"| A3
+      MAP -->|"POST /api/goto"| A4
+      MAP -->|"POST /api/set_velocity"| A5
+      MAP -->|"GET /api/get_telemetry"| A8
+      CAM -->|"GET /video"| A9
+      CAM -->|"SocketIO emit"| A10
+
+      style BROWSER fill:#ed8936,color:#fff
+      style API_ENDPOINTS fill:#4299e1,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== WIRKLICH GENUTZTE ENDPUNKTE ===== -->
+  <div class="box">
+    <h2>📡 Endpunkte die die Webseite wirklich nutzt</h2>
+    <p style="color:#4a5568; margin-top:0;">Nicht alle API-Endpunkte werden verwendet. Hier sind nur die, die das Dashboard und der Missions-Planer tatsächlich aufrufen:</p>
+    <div class="mermaid">
+    graph LR
+      subgraph BROWSER_JS["Browser-Skripte"]
+        BTN["buttons.js"]
+        MAP["map.js"]
+        CAM["camera.js"]
+        MP["mission_planner.js"]
+      end
+
+      subgraph ENDPUNKTE["Tatsächlich genutzte Endpunkte"]
+        E1["GET /api/arm_disarm"]
+        E2["POST /api/change_flightmode"]
+        E3["GET /api/takeoff"]
+        E4["GET /api/abort_mission"]
+        E5["GET /api/is_armed<br/>(alle 3s)"]
+        E6["GET /api/get_telemetry"]
+        E7["POST /api/mission_upload"]
+        E8["GET /api/mission_download"]
+        E9["Socket.IO /video_frame"]
+      end
+
+      BTN -->|"arm/abort/takeoff"| E1
+      BTN -->|"mode ändern"| E2
+      BTN -->|"starten"| E3
+      BTN -->|"notlandung"| E4
+      BTN -->|"status polling"| E5
+      MAP -->|"position + telemetrie"| E6
+      MP -->|"mission hochladen"| E7
+      MP -->|"mission herunterladen"| E8
+      CAM -->|"video stream"| E9
+
+      style BROWSER_JS fill:#ed8936,color:#fff
+      style ENDPUNKTE fill:#4299e1,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== DER MAVLINK-BRIDGE ===== -->
+  <div class="box">
+    <h2>🌉 Die MAVLink-Bridge — Übersetzer zwischen Python und Flugzeug</h2>
+    <p style="color:#4a5568; margin-top:0;"><code>mav_bridge.py</code> nutzt <strong>pymavlink</strong> und wandelt einfache Python-Methodenaufrufe in die native MAVLink-Sprache des Flugzeugs um, die über ein serielles Kabel gesendet wird.</p>
+    <div class="mermaid">
+    graph TB
+      subgraph PYTHON_CALLS["Python-Methodenaufrufe (von controll_api.py)"]
+        P1["bridge.arm() / disarm()"]
+        P2["bridge.set_mode('AUTO')"]
+        P3["bridge.takeoff(altitude=50)"]
+        P4["bridge.goto(lat, lon, alt)"]
+        P5["bridge.set_velocity(vx, vy, vz)"]
+        P6["bridge.upload_mission(items)"]
+        P7["bridge.download_mission()"]
+        P8["bridge.get_telemetry()"]
+      end
+
+      subgraph MAVLINK_MSGS["MAVLink-Nachrichten (über UART @ 921600 baud)"]
+        M1["COMMAND_LONG<br/>(starten / stoppen)"]
+        M2["SET_MODE<br/>(Flugmodus ändern)"]
+        M3["COMMAND_LONG + NAV_TAKEOFF<br/>(Start)"]
+        M4["SET_POSITION_TARGET_GLOBAL_INT<br/>(Zu Wegpunkt fliegen)"]
+        M5["SET_POSITION_TARGET_LOCAL_NED<br/>(Geschwindigkeitssteuerung)"]
+        M6["MISSION_CLEAR_ALL + MISSION_COUNT<br/>+ MISSION_ITEM_INT<br/>(Mission hochladen)"]
+        M7["MISSION_REQUEST_LIST +<br/>MISSION_REQUEST_INT<br/>(Mission herunterladen)"]
+        M8["HEARTBEAT + GLOBAL_POSITION_INT +<br/>ATTITUDE + SYS_STATUS + GPS_RAW_INT<br/>(Telemetrie)"]
+      end
+
+      subgraph PIXHAWK_MSGS["Pixhawk (ArduPilot)"]
+        PX["Empfängt Befehle<br/>Sendet Telemetrie zurück"]
+      end
+
+      P1 --> M1
+      P2 --> M2
+      P3 --> M3
+      P4 --> M4
+      P5 --> M5
+      P6 --> M6
+      P7 --> M7
+      P8 --> M8
+
+      M1 --> PX
+      M2 --> PX
+      M3 --> PX
+      M4 --> PX
+      M5 --> PX
+      M6 --> PX
+      M7 --> PX
+      M8 --> PX
+
+      style PYTHON_CALLS fill:#48bb78,color:#fff
+      style MAVLINK_MSGS fill:#4299e1,color:#fff
+      style PIXHAWK_MSGS fill:#e53e3e,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== WIE API UND MAVLINK BRIDGE ZUSAMMENARBEITEN ===== -->
+  <div class="box">
+    <h2>🔄 Wie API und MAVLink Bridge zusammenarbeiten</h2>
+    <p style="color:#4a5568; margin-top:0;">Wenn du z.B. auf "START" klickst, laufen viele Dinge in Sekundenbruchteilen ab. Hier der genaue Ablauf:</p>
+    <div class="mermaid">
+    sequenceDiagram
+      actor U as 👤 Du
+      participant B as buttons.js
+      participant API as controll_api.py
+      participant POOL as ThreadPoolExecutor
+      participant BR as mav_bridge.py
+      participant PX as Pixhawk
+
+      U->>B: Klick auf "START"
+      B->>API: GET /api/takeoff
+      API->>POOL: executor.submit(bridge.takeoff)
+      POOL->>BR: bridge.takeoff(altitude=50)
+      BR->>BR: 1. Setze Flugmodus auf GUIDED
+      BR->>PX: MAVLink SET_MODE (GUIDED)
+      BR->>PX: MAVLink COMMAND_LONG (NAV_TAKEOFF, alt=50)
+      PX-->>BR: MAVLink COMMAND_ACK (akzeptiert)
+      BR-->>POOL: Fertig (True/False)
+      POOL-->>API: Ergebnis zurück
+      API-->>B: JSON {status: "takeoff_requested"}
+      B-->>U: Button-Text aktualisiert
+
+      Note over U,PX: Gleichzeitig läuft im Hintergrund:
+      API->>BR: get_telemetry() (alle 1-2 Sekunden)
+      BR->>PX: MAVLink REQUEST_DATA_STREAM
+      PX-->>BR: HEARTBEAT, GLOBAL_POSITION_INT, ATTITUDE, SYS_STATUS
+      BR-->>API: Telemetrie-Daten
+      API-->>B: JSON mit GPS, Akku, Geschwindigkeit…
+      B-->>U: Karte und Anzeigen aktualisieren sich
+    </div>
+  </div>
+
+  <!-- ===== WIE API UND MAVLINK BRIDGE ZUSAMMENARBEITEN (EINFACH) ===== -->
+  <div class="box">
+    <h2>🔄 API ↔ MAVLink Bridge — Die Kommunikation im Überblick</h2>
+    <div class="mermaid">
+    graph LR
+      BTN["👤 Browser<br/>buttons.js<br/>Klick auf START"]
+      EP["🐍 API<br/>/api/takeoff<br/>HTTP Endpoint"]
+      POOL["ThreadPoolExecutor<br/>(4 Worker)"]
+      LOCK["Master-Lock<br/>(thread-sicher)"]
+      METHOD["bridge.takeoff(50)"]
+      MSGS["MAVLink-Nachrichten<br/>bauen"]
+      SERIAL["Seriell senden<br/>/dev/ttyAMA0<br/>@ 921600 baud"]
+      PX["🚁 Pixhawk<br/>Empfängt · Führt aus ·<br/>Sendet Telemetrie"]
+
+      BTN -->|"1. HTTP GET/POST"| EP
+      EP -->|"2. Aufgabe einreihen"| POOL
+      POOL -->|"3. Lock holen"| LOCK
+      LOCK -->|"4. Methode aufrufen"| METHOD
+      METHOD -->|"5. Message bauen"| MSGS
+      MSGS -->|"6. Seriell senden"| SERIAL
+      SERIAL -->|"7. UART Kabel"| PX
+      PX -->|"8. Bestätigung"| SERIAL
+      SERIAL -->|"9. MAVLink ACK"| MSGS
+      MSGS -->|"10. Ergebnis"| METHOD
+      METHOD -->|"11. Lock freigeben"| LOCK
+      LOCK -->|"12. Antwort"| POOL
+      POOL -->|"13. JSON Response"| EP
+      EP -->|"14. HTTP 200"| BTN
+
+      style BTN fill:#ed8936,color:#fff
+      style EP fill:#4299e1,color:#fff
+      style POOL fill:#4299e1,color:#fff
+      style LOCK fill:#4299e1,color:#fff
+      style METHOD fill:#48bb78,color:#fff
+      style MSGS fill:#48bb78,color:#fff
+      style SERIAL fill:#48bb78,color:#fff
+      style PX fill:#e53e3e,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== WAS JEDER KNOPF TUT ===== -->
+  <div class="mermaid">
+  graph LR
+
+    subgraph BUTTONS["Dashboard-Knöpfe"]
+      B1["ARM\n🔒 Motoren freischalten"]
+      B2["DISARM\n🔓 Motoren sperren (sicher)"]
+      B3["START\n🛫 50 Meter hoch fliegen"]
+      B4["MODUS\n🎛️ Flugstil ändern"]
+      B5["ABBRUCH\n🆘 Notlandung jetzt"]
+    end
+
+    subgraph WAS_PASSIERT["Was das Flugzeug wirklich tut"]
+      W1["Motoren frei — bereit zum Fliegen"]
+      W2["Motoren gesperrt — können nicht drehen"]
+      W3["Motoren drehen → Flugzeug steigt → schwebt"]
+      W4["MANUAL = du steuerst\nAUTO = folgt Mission\nRTL = fliegt heim"]
+      W5["Motoren aus → Flugzeug sinkt sanft"]
+    end
+
+    B1 --> W1
+    B2 --> W2
+    B3 --> W3
+    B4 --> W4
+    B5 --> W5
+
+    style B1 fill:#48bb78,color:#fff
+    style B2 fill:#48bb78,color:#fff
+    style B3 fill:#4299e1,color:#fff
+    style B4 fill:#4299e1,color:#fff
+    style B5 fill:#e53e3e,color:#fff
+
+    style W1 fill:#c6f6d5,color:#1a202c
+    style W2 fill:#c6f6d5,color:#1a202c
+    style W3 fill:#bee3f8,color:#1a202c
+    style W4 fill:#bee3f8,color:#1a202c
+    style W5 fill:#fed7d7,color:#1a202c
+</div>
+
+  <!-- ===== DIE VERKABELUNG ===== -->
+  <div class="box">
+    <h2>🔌 Wie alles verbunden ist</h2>
+    <div class="mermaid">
+    graph LR
+      subgraph IN_DEINER_HAND["In deiner Hand / auf dem Schreibtisch"]
+        LAPTOP["💻 Laptop oder Handy<br/>(zeigt die Webseite)"]
+      end
+
+      subgraph AN_DER_DROHNE["Am Flugzeug"]
+        PI["🍓 Raspberry Pi<br/>(kleiner Computer)"]
+        PX["🧠 Pixhawk<br/>(Flugcomputer)"]
+        CAM["📷 USB-Kamera"]
+        MOTORS["🛸 Motoren + Propeller"]
+        GPS["📡 GPS"]
+      end
+
+      LAPTOP -->|"📶 WLAN"| PI
+      PI -->|"🔗 USB"| CAM
+      PI -->|"⚡ Kabel (UART)"| PX
+      PX -->|"steuert"| MOTORS
+      PX -->|"liest"| GPS
+
+      style LAPTOP fill:#ed8936,color:#fff
+      style PI fill:#4299e1,color:#fff
+      style PX fill:#e53e3e,color:#fff
+      style CAM fill:#805ad5,color:#fff
+      style MOTORS fill:#2d3748,color:#fff
+      style GPS fill:#2d3748,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== MISSIONS-PLANER ===== -->
+  <div class="box">
+    <h2>📋 Missions-Planer — Eine Route fliegen</h2>
+    <div class="big-text">
+      Auf die Karte klicken → Punkte erscheinen → "Hochladen" klicken → Flugzeug fliegt jeden Punkt der Reihe nach ab
+    </div>
+    <div class="mermaid">
+    graph LR
+      A["1. Missions-Planer öffnen"] --> B["2. Auf Karte klicken um Wegpunkte zu setzen<br/>(A, B, C, D…)"]
+      B --> C["3. Aktionen zwischen Wegpunkten hinzufügen<br/>(Start, Warten, Landen…)"]
+      C --> D["4. HOCHLADEN klicken"]
+      D --> E["5. MISSION STARTEN klicken"]
+      E --> F["6. Flugzeug fliegt A → B → C → D automatisch"]
+    </div>
+  </div>
+
+  <!-- ===== MISSIONS-PLANER SEITE ===== -->
+  <div class="box">
+    <h2>📋 Missions-Planer — Was die Seite kann</h2>
+    <p style="color:#4a5568; margin-top:0;">Der Missions-Planer ist eine eigene Seite (nicht das Haupt-Dashboard). Er dient dazu, eine Flugroute für das Flugzeug zu erstellen und hochzuladen.</p>
+    <div class="mermaid">
+    graph LR
+      subgraph SEITE["mission_planner.html — Die Seite"]
+        HEADER["Header<br/>Logo + Titel + 'Zurück zum Dashboard'"]
+        MAP["Karte (Leaflet)<br/>id='plannerMap'"]
+        SIDEBAR["Sidebar"]
+      end
+
+      subgraph SIDEBAR_BLOCKS["Sidebar-Inhalt"]
+        WP_LIST["Wegpunkt-Liste<br/>id='waypointList'"]
+        MISSION_LIST["Mission-Liste<br/>id='missionList'<br/>(Drag&Drop)"]
+        ACTIONS["Aktions-Buttons:<br/>+ Wegpunkt · + Aktion<br/>· Löschen · Hochladen"]
+        FORMS["Formulare:<br/>Koordinaten (Lat/Lon)<br/>Aktion (Takeoff, Loiter…)"]
+      end
+
+      subgraph AKTIONEN["Mögliche Aktionen"]
+        A1["Takeoff"]
+        A2["Loiter"]
+        A3["RTL"]
+        A4["Land"]
+        A5["Delay"]
+        A6["Set Speed"]
+        A7["Condition Yaw"]
+        A8["Autoland Start"]
+      end
+
+      HEADER --> MAP
+      HEADER --> SIDEBAR
+      SIDEBAR --> SIDEBAR_BLOCKS
+      SIDEBAR_BLOCKS --> ACTIONS
+      SIDEBAR_BLOCKS --> FORMS
+      ACTIONS --> AKTIONEN
+
+      A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7 --> A8
+
+      style SEITE fill:#ed8936,color:#fff
+      style SIDEBAR_BLOCKS fill:#4299e1,color:#fff
+      style AKTIONEN fill:#48bb78,color:#fff
+    </div>
+  </div>
+
+  <footer>
+    UARV — Unmanned Aerial Reconnaissance Vehicle &nbsp;|&nbsp; Einfaches Diagramm
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    });
+  </script>
+</body>
+</html>

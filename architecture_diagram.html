@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UARV Software Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js">
+  </script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+    .diagram-container {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      overflow-x: auto;
+    }
+    .diagram-container h2 {
+      color: #fbbf24;
+      margin-top: 0;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+    .legend-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .legend-hardware { background: #ef4444; }
+    .legend-backend { background: #3b82f6; }
+    .legend-frontend { background: #22c55e; }
+    .legend-protocol { background: #f59e0b; }
+    .legend-data { background: #a855f7; }
+    .legend-thread { background: #ec4899; }
+    footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>UARV Software Architecture</h1>
+  <p class="subtitle">Unmanned Aerial Remote Vehicle — Interconnection Diagram</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box legend-hardware"></div> Hardware</div>
+    <div class="legend-item"><div class="legend-box legend-backend"></div> Backend (Python)</div>
+    <div class="legend-item"><div class="legend-box legend-frontend"></div> Frontend (Browser)</div>
+    <div class="legend-item"><div class="legend-box legend-protocol"></div> Protocol / Transport</div>
+    <div class="legend-item"><div class="legend-box legend-data"></div> Data Flow</div>
+    <div class="legend-item"><div class="legend-box legend-thread"></div> Thread / Process</div>
+  </div>
+
+  <!-- ===== OVERVIEW DIAGRAM ===== -->
+  <div class="diagram-container">
+    <h2>1. High-Level System Overview</h2>
+    <div class="mermaid">
+    graph TB
+      subgraph HARDWARE["🔴 Hardware Layer"]
+        PX["Pixhawk Autopilot<br/>(ArduPilot / PX4)"]
+        CAM["USB Camera<br/>(OpenCV)"]
+        SER["Serial Port<br/>/dev/ttyAMA0 @ 921600 baud"]
+      end
+
+      subgraph BACKEND["🔵 Backend — Python"]
+        API["controll_api.py<br/>Flask + SocketIO :8000"]
+        BRIDGE["mav_bridge.py<br/>MAVBridge (pymavlink)"]
+        POOL["ThreadPoolExecutor<br/>(4 workers)"]
+        STATE["In-Memory State<br/>(armed, flying, location)"]
+      end
+
+      subgraph WEB_SERVER["🟠 Web Server"]
+        NGINX["nginx<br/>(reverse proxy :80/:443)"]
+      end
+
+      subgraph FRONTEND["🟢 Frontend — Browser"]
+        DASH["admin_panel/index.html<br/>Main Dashboard"]
+        BTN["buttons.js<br/>(Arm, Mode, Takeoff, Abort)"]
+        CAM_JS["camera.js<br/>(SocketIO video)"]
+        MAP_JS["map.js<br/>(Leaflet map, telemetry)"]
+        MP["mission_planner.html + .js<br/>(Waypoints, actions, upload)"]
+        CONF["config.js<br/>(API_BASE)"]
+      end
+
+      subgraph TESTS["🧪 Test & Utility"]
+        T1["mav_test.py"]
+        T2["test_mission_upload.py"]
+        T3["test_mission_download.py"]
+        T4["servo_test.py"]
+      end
+
+      %% Hardware connections
+      SER -->|MAVLink| PX
+      CAM -->|Video frames| API
+
+      %% Backend internal
+      API -->|instantiates| BRIDGE
+      API -->|uses| POOL
+      API -->|reads/writes| STATE
+      BRIDGE -->|thread-safe read/write| PX
+      POOL -->|submits tasks to| BRIDGE
+
+      %% Frontend → Web Server → Backend
+      DASH -->|REST / SocketIO| NGINX
+      NGINX -->|proxy_pass| API
+      CONF -.->|configures| DASH
+      BTN -.->|handlers| DASH
+      CAM_JS -.->|stream| DASH
+      MAP_JS -.->|telemetry| DASH
+      MP -.->|mission CRUD| DASH
+
+      %% Tests → Backend
+      T1 -->|direct| BRIDGE
+      T2 -->|direct| BRIDGE
+      T3 -->|direct| BRIDGE
+      T4 -->|direct| BRIDGE
+
+      style PX fill:#ef4444,color:#fff
+      style CAM fill:#ef4444,color:#fff
+      style SER fill:#ef4444,color:#fff
+      style API fill:#3b82f6,color:#fff
+      style BRIDGE fill:#3b82f6,color:#fff
+      style POOL fill:#3b82f6,color:#fff
+      style STATE fill:#3b82f6,color:#fff
+      style DASH fill:#22c55e,color:#fff
+      style BTN fill:#22c55e,color:#fff
+      style CAM_JS fill:#22c55e,color:#fff
+      style MAP_JS fill:#22c55e,color:#fff
+      style MP fill:#22c55e,color:#fff
+      style CONF fill:#22c55e,color:#fff
+      style T1 fill:#94a3b8,color:#fff
+      style T2 fill:#94a3b8,color:#fff
+      style T3 fill:#94a3b8,color:#fff
+      style T4 fill:#94a3b8,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== DATA FLOW DIAGRAM ===== -->
+  <div class="diagram-container">
+    <h2>2. Data Flow — Flight Control Commands</h2>
+    <div class="mermaid">
+    sequenceDiagram
+      actor U as 👤 User
+      participant B as buttons.js
+      participant A as controll_api.py
+      participant P as ThreadPoolExecutor
+      participant M as mav_bridge.py
+      participant X as Pixhawk
+
+      U->>B: Click "ARM" button
+      B->>A: GET /arm_disarm
+      A->>P: executor.submit(bridge.arm_disarm)
+      P->>M: bridge.arm() or bridge.disarm()
+      M->>M: _arm_disarm_sync() — send MAV_CMD_COMPONENT_ARM_DISARM
+      M->>X: MAVLink COMMAND_LONG (param1=1 arm / 0 disarm)
+      X-->>M: COMMAND_ACK (MAV_RESULT_ACCEPTED)
+      M-->>P: return True/False
+      P-->>A: future.result()
+      A-->>B: JSON {status: "arm successful"}
+      B-->>U: Update button status text
+
+      U->>B: Click "Mode: AUTO"
+      B->>A: POST /change_flightmode {mode: "AUTO"}
+      A->>P: executor.submit(bridge.set_mode, "AUTO")
+      P->>M: bridge.set_mode("AUTO")
+      M->>X: MAVLink SET_MODE (custom_mode = AUTO)
+      X-->>M: (no explicit ack for SET_MODE)
+      M-->>P: return None
+      P-->>A: future.result()
+      A-->>B: JSON {status: "mode_change_requested"}
+      B-->>U: Button text updates
+
+      U->>B: Click "TAKEOFF"
+      B->>A: GET /takeoff
+      A->>P: executor.submit(bridge.takeoff)
+      P->>M: bridge.takeoff(altitude=50)
+      M->>X: SET_MODE (GUIDED) + MAV_CMD_NAV_TAKEOFF
+      X-->>M: (ack)
+      M-->>P: return None
+      P-->>A: future.result()
+      A-->>B: JSON {status: "takeoff_requested"}
+      B-->>U: Feedback
+    </div>
+  </div>
+
+  <!-- ===== TELEMETRY DATA FLOW ===== -->
+  <div class="diagram-container">
+    <h2>3. Data Flow — Telemetry & Video Streaming</h2>
+    <div class="mermaid">
+    graph LR
+      subgraph PIXHAWK["Pixhawk Autopilot"]
+        HB["HEARTBEAT"]
+        GP["GLOBAL_POSITION_INT"]
+        AT["ATTITUDE"]
+        GS["GPS_RAW_INT"]
+        SS["SYS_STATUS"]
+        VH["VFR_HUD"]
+      end
+
+      subgraph BRIDGE_T["mav_bridge.py"]
+        RL["_read() — recv_match"]
+        HL["_health_loop()<br/>(background thread)"]
+        GT["get_telemetry()"]
+        GG["get_gps_int() / get_gps_raw()"]
+        GB["battery_level()"]
+        HEALTH["self.health{}<br/>(thread-local cache)"]
+      end
+
+      subgraph API_T["controll_api.py"]
+        EP_TELE["/get_telemetry"]
+        EP_GPS["/get_gps"]
+        EP_HEALTH["/get_health"]
+        EP_BATT["/battery_level"]
+        EP_VIDEO["/video (MJPEG)"]
+        SIO["SocketIO<br/>video_frame event"]
+      end
+
+      subgraph FRONT_T["Browser (admin_panel)"]
+        MAP["map.js<br/>get_Location()"]
+        TEL_WIN["Telemetry Window"]
+        CAM_IMG["camera.js<br/>video_frame handler"]
+      end
+
+      %% MAVLink message flow
+      HB --> RL
+      GP --> RL
+      AT --> RL
+      GS --> RL
+      SS --> RL
+      VH --> RL
+
+      RL --> GT
+      RL --> GG
+      RL --> GB
+      RL --> HL
+      HL --> HEALTH
+
+      GT --> EP_TELE
+      GG --> EP_GPS
+      HEALTH --> EP_HEALTH
+      GB --> EP_BATT
+
+      EP_TELE -->|REST JSON| MAP
+      EP_TELE -->|REST JSON| TEL_WIN
+      EP_GPS -->|REST JSON| MAP
+      EP_HEALTH -->|REST JSON| FRONT_T
+      EP_BATT -->|REST JSON| FRONT_T
+
+      EP_VIDEO -->|MJPEG stream| CAM_IMG
+      SIO -->|base64 frames| CAM_IMG
+
+      style PIXHAWK fill:#ef4444,color:#fff
+      style BRIDGE_T fill:#3b82f6,color:#fff
+      style API_T fill:#3b82f6,color:#fff
+      style FRONT_T fill:#22c55e,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== MISSION FLOW ===== -->
+  <div class="diagram-container">
+    <h2>4. Data Flow — Mission Planning & Upload</h2>
+    <div class="mermaid">
+    sequenceDiagram
+      actor U as 👤 User
+      participant MP as mission_planner.js
+      participant API as controll_api.py
+      participant BR as mav_bridge.py
+      participant PX as Pixhawk
+
+      %% Mission creation
+      U->>MP: Click map → add waypoint
+      MP->>MP: missionItems.push({type:"waypoint", lat, lon})
+      U->>MP: Add action (takeoff, loiter, RTL…)
+      MP->>MP: missionItems.push({type:"action", action, param})
+
+      %% Upload
+      U->>MP: Click "Upload Mission"
+      MP->>MP: missionToMAVLink(exportMissionToJSON())
+      Note over MP: Converts JSON → MAVLink items<br/>(seq, frame, command, x, y, z, params)
+      MP->>API: POST /mission_upload [MAVLink items]
+      API->>BR: executor.submit(bridge.upload_mission, items)
+      BR->>PX: MISSION_CLEAR_ALL
+      PX-->>BR: MISSION_ACK (ACCEPTED)
+      BR->>PX: MISSION_COUNT (n items)
+      loop For each item
+        PX-->>BR: MISSION_REQUEST (seq)
+        BR->>PX: MISSION_ITEM_INT (seq, command, x, y, z, params)
+      end
+      PX-->>BR: MISSION_ACK (ACCEPTED)
+      BR-->>API: return True
+      API-->>MP: JSON {status: "upload_complete", items: N}
+      MP-->>U: Alert "Mission uploaded"
+
+      %% Download
+      U->>MP: Click "Download Mission"
+      MP->>API: GET /mission_download
+      API->>BR: executor.submit(bridge.download_mission)
+      BR->>PX: MISSION_REQUEST_LIST
+      PX-->>BR: MISSION_COUNT (n)
+      loop For each seq 0..n-1
+        BR->>PX: MISSION_REQUEST_INT (seq)
+        PX-->>BR: MISSION_ITEM_INT
+      end
+      BR-->>API: return [mission items]
+      API-->>MP: JSON [items]
+      MP->>MP: loadMissionFromJSON(items)
+      MP-->>U: Display mission on map
+    </div>
+  </div>
+
+  <!-- ===== COMPONENT DETAIL ===== -->
+  <div class="diagram-container">
+    <h2>5. controll_api.py — Endpoint Map</h2>
+    <div class="mermaid">
+    graph LR
+      subgraph FLIGHT_CTRL["✈️ Flight Control"]
+        FC1["/arm<br/>/disarm"]
+        FC2["/arm_disarm<br/>(toggle)"]
+        FC3["/change_flightmode<br/>POST {mode}"]
+        FC4["/change_mode<br/>POST {mode}"]
+        FC5["/takeoff"]
+        FC6["/goto<br/>POST {lat,lon,alt}"]
+        FC7["/set_velocity<br/>POST {vx,vy,vz}"]
+        FC8["/abort_mission"]
+        FC9["/rc_override"]
+      end
+
+      subgraph TELEMETRY["📡 Telemetry"]
+        T1["/get_telemetry"]
+        T2["/get_gps"]
+        T3["/get_gps_raw"]
+        T4["/gps_status"]
+        T5["/get_health"]
+        T6["/get_location"]
+        T7["/battery_level"]
+        T8["/get_param<br/>POST {name}"]
+        T9["/get_all_params"]
+      end
+
+      subgraph MISSION["📋 Mission"]
+        M1["/mission_upload<br/>POST [items]"]
+        M2["/mission_download"]
+        M3["/mission_download_raw"]
+        M4["/mission_start"]
+      end
+
+      subgraph VIDEO["📹 Video"]
+        V1["/video<br/>(MJPEG stream)"]
+        V2["SocketIO<br/>video_frame"]
+      end
+
+      subgraph SYS["⚙️ System"]
+        S1["/api/status"]
+        S2["/is_armed"]
+      end
+
+      subgraph INTERNAL["🔧 Internal"]
+        I1["translate_mission()<br/>JSON → MAVLink"]
+        I2["run_task()<br/>→ ThreadPoolExecutor"]
+        I3["stream_video()<br/>background task"]
+      end
+
+      FC1 --> I2
+      FC2 --> I2
+      FC3 --> I2
+      FC4 --> I2
+      FC5 --> I2
+      FC6 --> I2
+      FC7 --> I2
+      FC8 --> I2
+      FC9 --> I2
+
+      T1 --> I2
+      T2 --> I2
+      T3 --> I2
+      T4 --> I2
+      T5 --> I2
+      T6 --> I2
+      T7 --> I2
+      T8 --> I2
+      T9 --> I2
+
+      M1 --> I1
+      M1 --> I2
+      M2 --> I2
+      M3 --> I2
+      M4 --> I2
+
+      I2 -->|"bridge.arm()"| BRIDGE_N["mav_bridge.py<br/>MAVBridge"]
+      I1 -->|"MAVLink items"| BRIDGE_N
+      I3 -->|"base64 frames"| V2
+
+      V1 -->|"MJPEG"| CLIENT1["HTTP Client"]
+      V2 -->|"SocketIO"| CLIENT2["Browser"]
+
+      style FLIGHT_CTRL fill:#3b82f6,color:#fff
+      style TELEMETRY fill:#3b82f6,color:#fff
+      style MISSION fill:#3b82f6,color:#fff
+      style VIDEO fill:#3b82f6,color:#fff
+      style SYS fill:#3b82f6,color:#fff
+      style INTERNAL fill:#1e40af,color:#fff
+      style BRIDGE_N fill:#1e3a5f,color:#fff
+      style CLIENT1 fill:#22c55e,color:#fff
+      style CLIENT2 fill:#22c55e,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== THREADING MODEL ===== -->
+  <div class="diagram-container">
+    <h2>6. Threading & Concurrency Model</h2>
+    <div class="mermaid">
+    graph TB
+      subgraph MAIN_THREAD["Main Thread — Flask + SocketIO"]
+        FLASK["Flask Request Handlers<br/>(Werkzeug WSGI)"]
+        SOCKET["SocketIO Event Handlers<br/>(connect, disconnect)"]
+      end
+
+      subgraph BG_THREADS["Background Threads"]
+        BG1["stream_video()<br/>SocketIO background task<br/>~30 FPS camera → base64 → emit"]
+        BG2["MAVBridge._health_loop()<br/>1 Hz SYS_STATUS + GPS + HB<br/>→ self.health{} cache"]
+      end
+
+      subgraph POOL_THREADS["ThreadPoolExecutor (4 workers)"]
+        W1["Worker 1<br/>bridge.arm() / disarm()"]
+        W2["Worker 2<br/>bridge.get_telemetry()"]
+        W3["Worker 3<br/>bridge.upload_mission()"]
+        W4["Worker 4<br/>bridge.set_mode() / etc."]
+      end
+
+      subgraph LOCK["Thread Safety"]
+        L1["self._master_lock<br/>(MAVBridge)"]
+        L2["state_lock<br/>(controll_api)"]
+      end
+
+      FLASK -->|"run_task(fn)"| POOL_THREADS
+      SOCKET -->|"start_background_task"| BG_THREADS
+
+      POOL_THREADS -->|"acquire"| L1
+      BG2 -->|"acquire"| L1
+      BG1 -->|"socketio.emit()"| SOCKET
+
+      W1 -->|"MAVLink read/write"| PX["Pixhawk<br/>(serial)"]
+      W2 -->|"MAVLink read/write"| PX
+      W3 -->|"MAVLink read/write"| PX
+      W4 -->|"MAVLink read/write"| PX
+      BG2 -->|"MAVLink read/write"| PX
+
+      style MAIN_THREAD fill:#1e293b,color:#e2e8f0,stroke:#38bdf8,stroke-width:2px
+      style BG_THREADS fill:#1e293b,color:#e2e8f0,stroke:#ec4899,stroke-width:2px
+      style POOL_THREADS fill:#1e293b,color:#e2e8f0,stroke:#f59e0b,stroke-width:2px
+      style LOCK fill:#334155,color:#e2e8f0,stroke:#a855f7,stroke-width:2px
+      style PX fill:#ef4444,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== MAVLINK MESSAGE MAP ===== -->
+  <div class="diagram-container">
+    <h2>7. MAVLink Message Flow (mav_bridge.py)</h2>
+    <div class="mermaid">
+    graph LR
+      subgraph OUTGOING["📤 Outgoing Messages (→ Pixhawk)"]
+        O1["MAVLink_command_long<br/>(arm, disarm, takeoff, RTL, land,<br/>set_speed, condition_yaw, change_alt,<br/>loiter_time, set_message_interval)"]
+        O2["MAVLink_set_mode_message<br/>(change_mode)"]
+        O3["MAVLink_set_position_target_global_int<br/>(goto)"]
+        O4["MAVLink_set_position_target_local_ned<br/>(set_velocity)"]
+        O5["MAVLink_mission_clear_all<br/>(upload_mission)"]
+        O6["MAVLink_mission_count<br/>(upload_mission)"]
+        O7["MAVLink_mission_item_int<br/>(upload_mission)"]
+        O8["MAVLink_mission_request_list<br/>(download_mission)"]
+        O9["MAVLink_mission_request_int<br/>(download_mission)"]
+        O10["MAVLink_param_request_list<br/>(get_all_params)"]
+        O11["MAVLink_param_request_read<br/>(get_param)"]
+        O12["MAVLink_request_data_stream<br/>(get_telemetry, get_gps,<br/>battery_level, _health_loop)"]
+        O13["MAVLink_rc_channels_override<br/>(start_rc_override)"]
+      end
+
+      subgraph INCOMING["📥 Incoming Messages (← Pixhawk)"]
+        I1["HEARTBEAT<br/>(is_armed, get_mode, _health_loop)"]
+        I2["COMMAND_ACK<br/>(arm/disarm confirmation)"]
+        I3["MISSION_ACK<br/>(upload/download confirmation)"]
+        I4["MISSION_COUNT<br/>(download_mission)"]
+        I5["MISSION_REQUEST / MISSION_REQUEST_INT<br/>(upload_mission)"]
+        I6["MISSION_ITEM_INT / MISSION_ITEM<br/>(download_mission)"]
+        I7["PARAM_VALUE<br/>(get_param, get_all_params)"]
+        I8["GLOBAL_POSITION_INT<br/>(get_telemetry, get_gps_int)"]
+        I9["GPS_RAW_INT<br/>(get_telemetry, get_gps_raw, _health_loop)"]
+        I10["SYS_STATUS<br/>(get_telemetry, battery_level, _health_loop)"]
+        I11["ATTITUDE<br/>(get_telemetry)"]
+        I12["VFR_HUD<br/>(get_telemetry)"]
+      end
+
+      subgraph METHODS["MAVBridge Methods"]
+        M1["arm() / disarm()"]
+        M2["set_mode()"]
+        M3["goto()"]
+        M4["set_velocity()"]
+        M5["upload_mission()"]
+        M6["download_mission()"]
+        M7["get_param() / get_all_params()"]
+        M8["get_telemetry()"]
+        M9["get_gps_int() / get_gps_raw()"]
+        M10["battery_level()"]
+        M11["get_health()"]
+        M12["is_armed() / get_mode()"]
+        M13["start_rc_override()"]
+      end
+
+      METHODS -->|sends| OUTGOING
+      INCOMING -->|received by| METHODS
+
+      style OUTGOING fill:#1e3a5f,color:#93c5fd
+      style INCOMING fill:#3b1f1f,color:#fca5a5
+      style METHODS fill:#1f2937,color:#fbbf24
+    </div>
+  </div>
+
+  <!-- ===== FRONTEND COMPONENT MAP ===== -->
+  <div class="diagram-container">
+    <h2>8. Frontend Component Map (admin_panel/)</h2>
+    <div class="mermaid">
+    graph TB
+      subgraph PAGES["Pages"]
+        P1["index.html<br/>(Main Dashboard)"]
+        P2["mission_planner.html<br/>(Mission Editor)"]
+      end
+
+      subgraph SHARED["Shared"]
+        S1["config.js<br/>API_BASE = window.location.origin + '/api'"]
+        S2["stylesheet.css<br/>(Main styles)"]
+        S3["mission_planner.css<br/>(Planner styles)"]
+        S4["logo.png"]
+      end
+
+      subgraph DASH_JS["Dashboard Scripts (index.html)"]
+        D1["buttons.js<br/>• arm_disarm() → GET /arm_disarm<br/>• change_Mode() → POST /change_flightmode<br/>• takeoff() → GET /takeoff<br/>• abort_mission() → GET /abort_mission<br/>• Mode dropdown UI<br/>• Arm status polling (3s)"]
+        D2["camera.js<br/>• SocketIO connect<br/>• video_frame → base64 → img.src"]
+        D3["map.js<br/>• get_Location() → GET /get_telemetry<br/>• Leaflet map + plane marker<br/>• Telemetry floating window<br/>• Mission Order floating window<br/>• Drag windows"]
+      end
+
+      subgraph MP_JS["Mission Planner Scripts (mission_planner.html)"]
+        M1["mission_planner.js<br/>• Leaflet map (click to add WP)<br/>• Waypoint & action management<br/>• Drag-and-drop reorder<br/>• missionToMAVLink() — JSON→MAVLink<br/>• exportMissionToJSON()<br/>• uploadMission() → POST /mission_upload<br/>• downloadMission() → GET /mission_download<br/>• loadMissionFromJSON()"]
+      end
+
+      subgraph EXTERNAL_LIBS["External Libraries (CDN)"]
+        E1["Leaflet 1.9.4<br/>(maps)"]
+        E2["Socket.IO 4.7.2<br/>(real-time video)"]
+      end
+
+      P1 --> S1
+      P1 --> S2
+      P1 --> D1
+      P1 --> D2
+      P1 --> D3
+      P1 --> E1
+      P1 --> E2
+
+      P2 --> S1
+      P2 --> S3
+      P2 --> M1
+      P2 --> E1
+
+      D1 -.->|reads| S1
+      D2 -.->|reads| S1
+      D3 -.->|reads| S1
+      M1 -.->|reads| S1
+
+      style P1 fill:#22c55e,color:#fff
+      style P2 fill:#22c55e,color:#fff
+      style SHARED fill:#15803d,color:#fff
+      style DASH_JS fill:#166534,color:#fff
+      style MP_JS fill:#166534,color:#fff
+      style EXTERNAL_LIBS fill:#475569,color:#fff
+    </div>
+  </div>
+
+  <!-- ===== DEPLOYMENT ===== -->
+  <div class="diagram-container">
+    <h2>9. Deployment & Network Topology</h2>
+    <div class="mermaid">
+    graph LR
+      subgraph ONBOARD["Onboard Computer (Raspberry Pi / companion)"]
+        NGINX_HW["nginx<br/>(reverse proxy :80 / :443)"]
+        PY["Python 3<br/>controll_api.py :8000"]
+        CAM_HW["/dev/video0<br/>(USB Camera)"]
+        SER_HW["/dev/ttyAMA0<br/>(UART → Pixhawk)"]
+      end
+
+      subgraph PX["Aircraft"]
+        PIXHAWK["Pixhawk Autopilot"]
+        MOTORS["Motors / Servos"]
+        GPS_HW["GPS Module"]
+        IMU_HW["IMU / Baro"]
+      end
+
+      subgraph NETWORK["Local Network (WiFi / Ethernet)"]
+        ROUTER["Router / Hotspot"]
+      end
+
+      subgraph CLIENT_DEVICES["Client Devices"]
+        LAPTOP["Laptop / PC<br/>(Browser → admin_panel/)"]
+        TABLET["Tablet / Phone<br/>(Browser → admin_panel/)"]
+      end
+
+      %% Onboard connections
+      CAM_HW -->|Video frames| PY
+      SER_HW -->|UART| PIXHAWK
+      PIXHAWK -->|controls| MOTORS
+      PIXHAWK -->|reads| GPS_HW
+      PIXHAWK -->|reads| IMU_HW
+
+      %% Web server → backend
+      NGINX_HW -->|proxy_pass localhost:8000| PY
+
+      %% Network
+      NGINX_HW -->|WiFi/Ethernet| ROUTER
+      ROUTER -->|HTTP/WS| LAPTOP
+      ROUTER -->|HTTP/WS| TABLET
+
+      LAPTOP -->|REST :80/:443<br/>SocketIO| NGINX_HW
+      TABLET -->|REST :80/:443<br/>SocketIO| NGINX_HW
+
+      style ONBOARD fill:#1e293b,color:#e2e8f0,stroke:#3b82f6,stroke-width:2px
+      style PX fill:#ef4444,color:#fff,stroke:#fff,stroke-width:1px
+      style NETWORK fill:#1e293b,color:#e2e8f0,stroke:#f59e0b,stroke-width:2px
+      style CLIENT_DEVICES fill:#1e293b,color:#e2e8f0,stroke:#22c55e,stroke-width:2px
+    </div>
+  </div>
+
+  <footer>
+    UARV — Unmanned Aerial Remote Vehicle &nbsp;|&nbsp; Generated from codebase analysis
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#1e293b',
+        primaryTextColor: '#e2e8f0',
+        primaryBorderColor: '#475569',
+        lineColor: '#64748b',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b',
+        background: '#1e293b',
+        mainBkg: '#1e293b',
+        nodeBorder: '#475569',
+        clusterBkg: '#0f172a',
+        titleColor: '#fbbf24',
+        edgeLabelBackground: '#1e293b',
+        fontFamily: 'Segoe UI, Tahoma, sans-serif'
+      },
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: true,
+        htmlLabels: true
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixhawk Wiring Diagram</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        h1 {
+            color: #00d4ff;
+            margin-bottom: 5px;
+            font-size: 28px;
+            text-shadow: 0 0 10px rgba(0,212,255,0.3);
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .diagram-container {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            border: 1px solid #0f3460;
+            max-width: 1200px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 15px 20px;
+            background: #0f3460;
+            border-radius: 10px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #ccc;
+        }
+        .legend-color {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .notes {
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px 20px;
+            background: #0f3460;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+        .notes strong { color: #00d4ff; }
+        .notes code {
+            background: #1a1a2e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #ffd700;
+        }
+        .pinout-toggle {
+            background: #0f3460;
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        .pinout-toggle:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+        }
+        .pinout-table {
+            display: none;
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 15px;
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #0f3460;
+        }
+        .pinout-table.visible { display: block; }
+        #fullscreenBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #0f3460;
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+        #fullscreenBtn:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+        }
+        .diagram-container {
+            position: relative;
+        }
+        .pinout-table h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+        .pinout-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .pinout-table th {
+            background: #0f3460;
+            color: #00d4ff;
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 2px solid #1a1a2e;
+        }
+        .pinout-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid #0f3460;
+            color: #ccc;
+        }
+        .pinout-table tr:hover td { background: #1a2744; }
+        .pinout-table .port-name {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .pinout-table .pin-num { color: #00d4ff; }
+        .pinout-table .signal { color: #7ec8e3; }
+        .pinout-table .wire-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        @media (max-width: 768px) {
+            .diagram-container { padding: 10px; }
+            h1 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 Pixhawk Wiring Diagram</h1>
+    <p class="subtitle">Complete wiring guide for Pixhawk flight controller — all components and connections</p>
+
+    <div class="diagram-container">
+        <button id="fullscreenBtn" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶ Fullscreen</button>
+        <svg viewBox="-240 0 1490 750" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <filter id="shadow">
+                    <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.4"/>
+                </filter>
+                <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#ff4444"/>
+                </marker>
+                <marker id="arrowBlack" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+                </marker>
+                <marker id="arrowWhite" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#ddd"/>
+                </marker>
+                <marker id="arrowYellow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#ffd700"/>
+                </marker>
+                <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#44ff44"/>
+                </marker>
+                <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#4488ff"/>
+                </marker>
+                <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#ff8800"/>
+                </marker>
+                <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#00ddff"/>
+                </marker>
+                <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#aa44ff"/>
+                </marker>
+                <marker id="arrowPink" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#e91e63"/>
+                </marker>
+                <linearGradient id="pixhawkGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2a2a3a"/>
+                    <stop offset="100%" stop-color="#1a1a2a"/>
+                </linearGradient>
+                <linearGradient id="gpsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1a3a2a"/>
+                    <stop offset="100%" stop-color="#0f2a1a"/>
+                </linearGradient>
+                <linearGradient id="rcGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3a1a1a"/>
+                    <stop offset="100%" stop-color="#2a0f0f"/>
+                </linearGradient>
+                <linearGradient id="telGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1a1a3a"/>
+                    <stop offset="100%" stop-color="#0f0f2a"/>
+                </linearGradient>
+                <linearGradient id="powerGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3a2a1a"/>
+                    <stop offset="100%" stop-color="#2a1a0f"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Background grid -->
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a2a4a" stroke-width="0.5"/>
+            </pattern>
+            <rect width="1250" height="750" fill="url(#grid)" opacity="0.5"/>
+
+            <!-- ============================================ -->
+            <!-- PIXHAWK MAIN BOARD -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="300" y="220" width="500" height="280" rx="12" fill="url(#pixhawkGrad)" stroke="#4a4a6a" stroke-width="2"/>
+                <!-- Board inner border -->
+                <rect x="310" y="230" width="480" height="260" rx="8" fill="none" stroke="#3a3a5a" stroke-width="1"/>
+                
+                <!-- Pixhawk label -->
+                <text x="550" y="260" text-anchor="middle" fill="#00d4ff" font-size="20" font-weight="bold" filter="url(#glow)">PIXHAWK</text>
+                <text x="550" y="278" text-anchor="middle" fill="#666" font-size="11">Flight Controller (FMUv2 / v3 / v5)</text>
+                
+                <!-- CPU icon -->
+                <rect x="470" y="290" width="160" height="60" rx="6" fill="#0f0f1f" stroke="#3a3a5a" stroke-width="1"/>
+                <text x="550" y="312" text-anchor="middle" fill="#aaa" font-size="11">STM32F427 / F765</text>
+                <text x="550" y="328" text-anchor="middle" fill="#888" font-size="10">Cortex-M4 / M7 Core</text>
+                <text x="550" y="344" text-anchor="middle" fill="#666" font-size="9">IMU: ICM-20689 / MPU-9250</text>
+
+                <!-- Port labels on Pixhawk -->
+                <text x="320" y="360" fill="#ffd700" font-size="10" font-weight="bold">TELEM1</text>
+                <text x="320" y="375" fill="#ffd700" font-size="10" font-weight="bold">TELEM2</text>
+                <text x="320" y="390" fill="#ffd700" font-size="10" font-weight="bold">GPS</text>
+                <text x="320" y="405" fill="#ffd700" font-size="10" font-weight="bold">I2C</text>
+                <text x="320" y="420" fill="#ffd700" font-size="10" font-weight="bold">POWER</text>
+                <text x="320" y="435" fill="#ffd700" font-size="10" font-weight="bold">CAN2</text>
+
+                <text x="720" y="360" fill="#ffd700" font-size="10" font-weight="bold">RC IN</text>
+                <text x="720" y="375" fill="#ffd700" font-size="10" font-weight="bold">SBUS OUT</text>
+                <text x="720" y="390" fill="#ffd700" font-size="10" font-weight="bold">USB</text>
+                <text x="720" y="405" fill="#ffd700" font-size="10" font-weight="bold">SAFETY</text>
+                <text x="720" y="420" fill="#ffd700" font-size="10" font-weight="bold">BUZZER</text>
+
+                <!-- Main Output ports -->
+                <text x="550" y="470" text-anchor="middle" fill="#ffd700" font-size="11" font-weight="bold">MAIN OUT 1 ─── 2 ─── 3 ─── 4 ─── 5 ─── 6 ─── 7 ─── 8</text>
+                <text x="550" y="488" text-anchor="middle" fill="#888" font-size="9">PWM / DShot Outputs (Motors, Servos, Gimbal)</text>
+
+                <!-- AUX Outputs -->
+                <text x="550" y="505" text-anchor="middle" fill="#ffd700" font-size="10" font-weight="bold">AUX OUT 1 ─── 2 ─── 3 ─── 4 ─── 5 ─── 6</text>
+                <text x="550" y="518" text-anchor="middle" fill="#888" font-size="9">GPIO / PWM / UART (Camera trigger, relays, etc.)</text>
+
+                <!-- Micro USB port visual -->
+                <rect x="760" y="380" width="30" height="18" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+                <rect x="770" y="384" width="10" height="10" rx="1" fill="#555"/>
+            </g>
+
+            <!-- ============================================ -->
+            <!-- INNOMAKER U20CAM -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="-230" y="200" width="200" height="130" rx="10" fill="#1a1a2a" stroke="#e91e63" stroke-width="2"/>
+                <text x="-130" y="230" text-anchor="middle" fill="#e91e63" font-size="14" font-weight="bold">InnoMaker U20CAM</text>
+                <text x="-130" y="248" text-anchor="middle" fill="#888" font-size="10">USB Camera Module</text>
+                <text x="-130" y="265" text-anchor="middle" fill="#888" font-size="10">UVC / 1080p / 30fps</text>
+                
+                <!-- Camera icon -->
+                <rect x="-155" y="285" width="50" height="18" rx="3" fill="none" stroke="#e91e63" stroke-width="1.5" opacity="0.6"/>
+                <circle cx="-145" cy="294" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="-138" cy="294" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="-131" cy="294" r="2" fill="#e91e63" opacity="0.6"/>
+                <rect x="-120" y="290" width="8" height="8" rx="1" fill="none" stroke="#e91e63" stroke-width="1" opacity="0.6"/>
+                
+                <text x="-130" y="315" text-anchor="middle" fill="#e91e63" font-size="9">USB 2.0 (to Raspberry Pi)</text>
+            </g>
+
+            <!-- InnoMaker U20CAM to Raspberry Pi USB connection -->
+            <path d="M-30,265 L0,265 L0,335 L30,335" fill="none" stroke="#e91e63" stroke-width="2" marker-end="url(#arrowPink)"></path>
+            <text x="-15" y="260" fill="#e91e63" font-size="11" text-anchor="middle">USB</text>
+
+            <!-- ============================================ -->
+            <!-- ZTE MF79U -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="-230" y="340" width="200" height="130" rx="10" fill="#1a1a2a" stroke="#e91e63" stroke-width="2"/>
+                <text x="-130" y="370" text-anchor="middle" fill="#e91e63" font-size="14" font-weight="bold">ZTE MF79U</text>
+                <text x="-130" y="388" text-anchor="middle" fill="#888" font-size="10">4G LTE USB Modem</text>
+                <text x="-130" y="405" text-anchor="middle" fill="#888" font-size="10">LTE Cat.4 / 150Mbps</text>
+                
+                <!-- Modem icon -->
+                <rect x="-155" y="425" width="50" height="18" rx="3" fill="none" stroke="#e91e63" stroke-width="1.5" opacity="0.6"/>
+                <circle cx="-145" cy="434" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="-138" cy="434" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="-131" cy="434" r="2" fill="#e91e63" opacity="0.6"/>
+                <rect x="-120" y="430" width="8" height="8" rx="1" fill="none" stroke="#e91e63" stroke-width="1" opacity="0.6"/>
+                
+                <text x="-130" y="460" text-anchor="middle" fill="#e91e63" font-size="9">USB 2.0 (to Raspberry Pi)</text>
+            </g>
+
+            <!-- ZTE MF79U to Raspberry Pi USB connection -->
+            <path d="M-30,400 L0,400 L0,335 L30,335" fill="none" stroke="#e91e63" stroke-width="2" marker-end="url(#arrowPink)"></path>
+            <text x="-15" y="395" fill="#e91e63" font-size="11" text-anchor="middle">USB</text>
+
+            <!-- ============================================ -->
+            <!-- TELEMETRY RADIO -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="30" y="270" width="200" height="130" rx="10" fill="#1a1a2a" stroke="#c2185b" stroke-width="2"/>
+                <text x="130" y="300" text-anchor="middle" fill="#e91e63" font-size="14" font-weight="bold">RASPBERRY PI</text>
+                <text x="130" y="318" text-anchor="middle" fill="#888" font-size="10">Onboard Computer</text>
+                <text x="130" y="335" text-anchor="middle" fill="#888" font-size="10">UART / I2C / USB</text>
+                
+                <!-- Pi icon (simple representation) -->
+                <rect x="105" y="355" width="50" height="18" rx="3" fill="none" stroke="#e91e63" stroke-width="1.5" opacity="0.6"/>
+                <circle cx="115" cy="364" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="122" cy="364" r="2" fill="#e91e63" opacity="0.6"/>
+                <circle cx="129" cy="364" r="2" fill="#e91e63" opacity="0.6"/>
+                <rect x="140" y="360" width="8" height="8" rx="1" fill="none" stroke="#e91e63" stroke-width="1" opacity="0.6"/>
+                
+                <text x="130" y="385" text-anchor="middle" fill="#e91e63" font-size="9">4-pin JST-GH (TELEM2)</text>
+            </g>
+
+            <!-- Raspberry Pi to Pixhawk TELEM2 connection (stops outside left edge) -->
+            <path d="M230,320 L295,375" fill="none" stroke="#e91e63" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowPink)"/>
+            <text x="240" y="350" fill="#e91e63" font-size="9" transform="rotate(-70,240,350)">TELEM2 Port</text>
+
+            <!-- ============================================ -->
+            <!-- TELEMETRY RADIO -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="30" y="100" width="200" height="110" rx="10" fill="url(#telGrad)" stroke="#4488ff" stroke-width="2"/>
+                <text x="130" y="130" text-anchor="middle" fill="#6699ff" font-size="14" font-weight="bold">TELEMETRY RADIO</text>
+                <text x="130" y="148" text-anchor="middle" fill="#888" font-size="10">433 / 868 / 915 MHz</text>
+                <text x="130" y="165" text-anchor="middle" fill="#888" font-size="10">SiK / HolyBro / RFD900</text>
+                
+                <!-- Radio waves icon -->
+                <path d="M110,180 Q130,170 150,180" fill="none" stroke="#6699ff" stroke-width="1.5" opacity="0.6"/>
+                <path d="M100,188 Q130,170 160,188" fill="none" stroke="#6699ff" stroke-width="1.5" opacity="0.4"/>
+                <path d="M90,196 Q130,170 170,196" fill="none" stroke="#6699ff" stroke-width="1.5" opacity="0.2"/>
+                
+                <text x="130" y="200" text-anchor="middle" fill="#6699ff" font-size="9">4-pin JST-GH (TELEM1/2)</text>
+            </g>
+
+            <!-- Telemetry to Pixhawk connection (stops outside left edge) -->
+            <path d="M230,155 L295,365" fill="none" stroke="#6699ff" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowBlue)"/>
+            <text x="240" y="270" fill="#6699ff" font-size="9" transform="rotate(-70,240,270)">TELEM1 Port</text>
+
+            <!-- ============================================ -->
+            <!-- GPS + COMPASS MODULE -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="30" y="440" width="200" height="130" rx="10" fill="url(#gpsGrad)" stroke="#2a6a3a" stroke-width="2"/>
+                <text x="130" y="470" text-anchor="middle" fill="#44ff88" font-size="14" font-weight="bold">GPS + COMPASS</text>
+                <text x="130" y="488" text-anchor="middle" fill="#888" font-size="10">u-blox M8N / M9N / M10</text>
+                <text x="130" y="505" text-anchor="middle" fill="#888" font-size="10">HMC5883L / IST8310</text>
+                
+                <!-- GPS antenna icon -->
+                <circle cx="130" cy="530" r="12" fill="none" stroke="#44ff88" stroke-width="1.5" opacity="0.6"/>
+                <line x1="130" y1="518" x2="130" y2="542" stroke="#44ff88" stroke-width="1.5" opacity="0.6"/>
+                <line x1="118" y1="530" x2="142" y2="530" stroke="#44ff88" stroke-width="1.5" opacity="0.6"/>
+                <line x1="121" y1="521" x2="139" y2="539" stroke="#44ff88" stroke-width="1" opacity="0.4"/>
+                <line x1="139" y1="521" x2="121" y2="539" stroke="#44ff88" stroke-width="1" opacity="0.4"/>
+                
+                <!-- Port label -->
+                <text x="130" y="560" text-anchor="middle" fill="#44ff88" font-size="9">4-pin JST-GH (GPS + I2C Compass)</text>
+            </g>
+
+            <!-- GPS to Pixhawk connection (stops outside left edge) -->
+            <path d="M230,505 L295,390" fill="none" stroke="#44ff88" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowGreen)"/>
+            <text x="240" y="450" fill="#44ff88" font-size="9" transform="rotate(-70,240,450)">GPS Port (UART + I2C)</text>
+
+            <!-- ============================================ -->
+            <!-- POWER MODULE + BATTERY -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="30" y="590" width="200" height="130" rx="10" fill="url(#powerGrad)" stroke="#ff8800" stroke-width="2"/>
+                <text x="130" y="620" text-anchor="middle" fill="#ffaa44" font-size="14" font-weight="bold">POWER MODULE</text>
+                <text x="130" y="638" text-anchor="middle" fill="#888" font-size="10">6S LiPo (14.8V - 25.2V)</text>
+                <text x="130" y="655" text-anchor="middle" fill="#888" font-size="10">Current: 30A / 60A / 90A</text>
+                
+                <!-- Battery icon -->
+                <rect x="110" y="665" width="40" height="20" rx="3" fill="none" stroke="#ffaa44" stroke-width="1.5"/>
+                <rect x="145" y="670" width="6" height="10" rx="1" fill="#ffaa44"/>
+                <line x1="118" y1="670" x2="118" y2="680" stroke="#ffaa44" stroke-width="1"/>
+                <line x1="125" y1="670" x2="125" y2="680" stroke="#ffaa44" stroke-width="1"/>
+                <line x1="132" y1="670" x2="132" y2="680" stroke="#ffaa44" stroke-width="1"/>
+                <text x="130" y="700" text-anchor="middle" fill="#ffaa44" font-size="9">XT60 Connector</text>
+                
+                <text x="130" y="715" text-anchor="middle" fill="#ffaa44" font-size="9">6-pin (VCC, GND, V, I)</text>
+            </g>
+
+            <!-- Power to Pixhawk connection (stops outside left edge) -->
+            <path d="M230,655 L295,420" fill="none" stroke="#ffaa44" stroke-width="2.5" marker-end="url(#arrowOrange)"/>
+            <text x="240" y="540" fill="#ffaa44" font-size="9" transform="rotate(-70,240,540)">POWER Port (6-pin)</text>
+
+            <path d="M230,655 L855,655 L855,115 L950,115" fill="none" stroke="#ff8800" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowOrange)"/>
+            <text x="540" y="645" fill="#ffaa44" font-size="9">Power to ESC 1 (BEC Connection)</text>
+
+
+            <!-- ============================================ -->
+            <!-- ESC + MOTOR 1 -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="100" width="200" height="80" rx="8" fill="#1a1a2a" stroke="#ff4444" stroke-width="1.5"/>
+                <text x="1050" y="125" text-anchor="middle" fill="#ff6666" font-size="12" font-weight="bold">ESC 1 ── MOTOR 1</text>
+                <text x="1050" y="142" text-anchor="middle" fill="#888" font-size="9">BLHeli_32 / SimonK</text>
+                <text x="1050" y="158" text-anchor="middle" fill="#888" font-size="9">PWM / DShot1200</text>
+                <text x="1050" y="173" text-anchor="middle" fill="#ff6666" font-size="9">3-wire (Signal, 5V, GND)</text>
+            </g>
+
+            <!-- ESC 1 to Pixhawk MAIN OUT 1 (routed BELOW the Pixhawk, stops at bottom edge) -->
+            <path d="M950,140 L920,140 L920,590 L420,590 L420,500" fill="none" stroke="#ff4444" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+
+            <!-- ============================================ -->
+            <!-- SERVO RUDDER -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="200" width="200" height="80" rx="8" fill="#1a1a2a" stroke="#44ff44" stroke-width="1.5"/>
+                <text x="1050" y="225" text-anchor="middle" fill="#66ff66" font-size="12" font-weight="bold">SERVO RUDDER</text>
+                <text x="1050" y="242" text-anchor="middle" fill="#888" font-size="9">Analog / Digital Servo</text>
+                <text x="1050" y="258" text-anchor="middle" fill="#888" font-size="9">PWM 50Hz (1000-2000us)</text>
+                <text x="1050" y="273" text-anchor="middle" fill="#66ff66" font-size="9">3-wire (Signal, 5V, GND)</text>
+            </g>
+
+            <!-- Servo Rudder to Pixhawk MAIN OUT 2 (routed BELOW the Pixhawk, stops at bottom edge) -->
+            <path d="M950,240 L910,240 L910,610 L480,610 L480,500" fill="none" stroke="#44ff44" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+
+            <!-- ============================================ -->
+            <!-- SERVO ELEVATOR -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="300" width="200" height="80" rx="8" fill="#1a1a2a" stroke="#4488ff" stroke-width="1.5"/>
+                <text x="1050" y="325" text-anchor="middle" fill="#6699ff" font-size="12" font-weight="bold">SERVO ELEVATOR</text>
+                <text x="1050" y="342" text-anchor="middle" fill="#888" font-size="9">Analog / Digital Servo</text>
+                <text x="1050" y="358" text-anchor="middle" fill="#888" font-size="9">PWM 50Hz (1000-2000us)</text>
+                <text x="1050" y="373" text-anchor="middle" fill="#6699ff" font-size="9">3-wire (Signal, 5V, GND)</text>
+            </g>
+
+            <!-- Servo Elevator to Pixhawk MAIN OUT 3 (routed BELOW the Pixhawk, stops at bottom edge) -->
+            <path d="M950,340 L900,340 L900,630 L540,630 L540,500" fill="none" stroke="#4488ff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+
+            <!-- ============================================ -->
+            <!-- USB CONNECTION -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="520" width="200" height="45" rx="8" fill="#1a1a2a" stroke="#888" stroke-width="1.5"/>
+                <text x="1050" y="545" text-anchor="middle" fill="#ccc" font-size="12" font-weight="bold">USB (Ground Station)</text>
+            </g>
+
+            <!-- USB to Pixhawk (stops outside right edge) -->
+            <path d="M950,542 L930,542 L930,395 L805,395" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowWhite)"/>
+
+            <!-- ============================================ -->
+            <!-- SAFETY SWITCH -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="610" width="200" height="60" rx="8" fill="#1a1a2a" stroke="#00ddff" stroke-width="1.5"/>
+                <text x="1050" y="635" text-anchor="middle" fill="#00ddff" font-size="12" font-weight="bold">SAFETY SWITCH</text>
+                <text x="1050" y="652" text-anchor="middle" fill="#888" font-size="9">3-pin JST (SW, VCC, GND)</text>
+            </g>
+
+            <!-- Safety to Pixhawk (stops outside right edge) -->
+            <path d="M950,640 L890,640 L890,405 L805,405" fill="none" stroke="#00ddff" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+
+            <!-- ============================================ -->
+            <!-- BUZZER -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="950" y="690" width="200" height="60" rx="8" fill="#1a1a2a" stroke="#aa44ff" stroke-width="1.5"/>
+                <text x="1050" y="715" text-anchor="middle" fill="#bb66ff" font-size="12" font-weight="bold">BUZZER</text>
+                <text x="1050" y="732" text-anchor="middle" fill="#888" font-size="9">2-pin (Positive, GND)</text>
+            </g>
+
+            <!-- Buzzer to Pixhawk (stops outside right edge) -->
+            <path d="M950,720 L880,720 L880,420 L805,420" fill="none" stroke="#aa44ff" stroke-width="1.5" marker-end="url(#arrowPurple)"/>
+
+            <!-- ============================================ -->
+            <!-- SERVO / GIMBAL (MAIN OUT 5-8) -->
+            <!-- ============================================ -->
+            <g filter="url(#shadow)">
+                <rect x="30" y="690" width="200" height="45" rx="8" fill="#1a1a2a" stroke="#ff8800" stroke-width="1.5"/>
+                <text x="130" y="715" text-anchor="middle" fill="#ffaa44" font-size="11" font-weight="bold">SERVO / GIMBAL (MAIN 5-8)</text>
+            </g>
+
+            <!-- Servo to Pixhawk (routed BELOW the Pixhawk, stops at bottom edge) -->
+            <!--<path d="M230,712 L230,670 L700,670 L700,500" fill="none" stroke="#ff8800" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowOrange)"/>-->
+
+            <!-- ============================================ -->
+            <!-- CONNECTION LEGEND ON BOARD -->
+            <!-- ============================================ -->
+            <!-- Port connector dots on Pixhawk left side -->
+            <circle cx="310" cy="360" r="4" fill="#44ff88"/>
+            <circle cx="310" cy="375" r="4" fill="#6699ff"/>
+            <circle cx="310" cy="390" r="4" fill="#44ff88"/>
+            <circle cx="310" cy="405" r="4" fill="#ffaa44"/>
+            <circle cx="310" cy="420" r="4" fill="#540f24"/>
+            <circle cx="310" cy="435" r="4" fill="#888"/>
+
+            <!-- Port connector dots on Pixhawk right side -->
+            <circle cx="790" cy="355" r="4" fill="#ff6666"/>
+            <circle cx="790" cy="370" r="4" fill="#888"/>
+            <circle cx="790" cy="395" r="4" fill="#ccc"/>
+            <circle cx="790" cy="405" r="4" fill="#00ddff"/>
+            <circle cx="790" cy="420" r="4" fill="#bb66ff"/>
+
+            <!-- ============================================ -->
+            <!-- WIRE COLOR INDICATORS ON PIXHAWK -->
+            <!-- ============================================ -->
+            <!-- Standard servo wire colors on outputs -->
+            <line x1="400" y1="465" x2="420" y2="465" stroke="#ff4444" stroke-width="2"/>
+            <line x1="400" y1="470" x2="420" y2="470" stroke="#ffaa44" stroke-width="2"/>
+            <line x1="400" y1="475" x2="420" y2="475" stroke="#8B4513" stroke-width="2"/>
+            <text x="425" y="472" fill="#888" font-size="8">Signal / 5V / GND</text>
+
+            <!-- ============================================ -->
+            <!-- ARROW INDICATORS -->
+            <!-- ============================================ -->
+            <!-- Pixhawk orientation arrow -->
+            <polygon points="550,230 540,245 560,245" fill="#00d4ff" opacity="0.5"/>
+            <text x="550" y="245" text-anchor="middle" fill="#00d4ff" font-size="8" opacity="0.5">▲ FRONT</text>
+        </svg>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:#44ff88"></div> GPS / Compass</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff6666"></div> RC Receiver</div>
+        <div class="legend-item"><div class="legend-color" style="background:#6699ff"></div> Telemetry</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffaa44"></div> Power Module</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div> Motor 1 (Main Out 1)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#44ff44"></div> Motor 2 (Main Out 2)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#4488ff"></div> Motor 3 (Main Out 3)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ffd700"></div> Motor 4 (Main Out 4)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#00ddff"></div> Safety Switch</div>
+        <div class="legend-item"><div class="legend-color" style="background:#bb66ff"></div> Buzzer</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff8800"></div> Servo / Gimbal</div>
+        <div class="legend-item"><div class="legend-color" style="background:#888"></div> USB</div>
+    </div>
+
+    <!-- Pinout Toggle -->
+    <button class="pinout-toggle" onclick="document.querySelector('.pinout-table').classList.toggle('visible')">
+        📋 Toggle Pinout Reference Table
+    </button>
+
+    <!-- Pinout Reference Table -->
+    <div class="pinout-table">
+        <h3>📌 Pixhawk Port Pinout Reference</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Port</th>
+                    <th>Pin</th>
+                    <th>Signal</th>
+                    <th>Voltage</th>
+                    <th>Wire Color</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="port-name" rowspan="4">TELEM1 / TELEM2</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power output (up to 500mA)</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">TX</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>Serial transmit</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">RX</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#4488ff"></span> Blue</td>
+                    <td>Serial receive</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">4</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="4">GPS</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power output</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">TX</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>GPS serial data out</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">RX</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#4488ff"></span> Blue</td>
+                    <td>GPS serial data in (for config)</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">4</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="4">I2C</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power output</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">SCL</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>I2C clock</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">SDA</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#4488ff"></span> Blue</td>
+                    <td>I2C data</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">4</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="6">POWER</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>5V from power module (BEC)</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Redundant 5V</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">CURRENT</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>Battery current sensor</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">4</td>
+                    <td class="signal">VOLTAGE</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#4488ff"></span> Blue</td>
+                    <td>Battery voltage divider</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">5</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">6</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground redundant</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="3">RC IN</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power input from RX</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">SBUS/PPM</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>RC signal input</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="3">SAFETY</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Pull-up voltage</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">SWITCH</td>
+                    <td>3.3V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>Safety switch input</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="2">BUZZER</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">BUZZER+</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>Buzzer positive</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">BUZZER-</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Buzzer negative (GND)</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="3">MAIN OUT (1-8)</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">SIGNAL</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>PWM / DShot signal</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power (from BEC / ESC)</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+                <tr>
+                    <td class="port-name" rowspan="4">CAN1 / CAN2</td>
+                    <td class="pin-num">1</td>
+                    <td class="signal">VCC</td>
+                    <td>5V</td>
+                    <td><span class="wire-color" style="background:#ff4444"></span> Red</td>
+                    <td>Power output</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">2</td>
+                    <td class="signal">CAN_H</td>
+                    <td>2.5V</td>
+                    <td><span class="wire-color" style="background:#ffd700"></span> Yellow</td>
+                    <td>CAN bus high</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">3</td>
+                    <td class="signal">CAN_L</td>
+                    <td>2.5V</td>
+                    <td><span class="wire-color" style="background:#4488ff"></span> Blue</td>
+                    <td>CAN bus low</td>
+                </tr>
+                <tr>
+                    <td class="pin-num">4</td>
+                    <td class="signal">GND</td>
+                    <td>0V</td>
+                    <td><span class="wire-color" style="background:#333"></span> Black</td>
+                    <td>Ground</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notes">
+        <strong>⚠️ Important Wiring Notes:</strong><br>
+        • <strong>Power:</strong> Always connect the Power Module <strong>before</strong> connecting USB. The Pixhawk can be powered via USB for configuration, but the power module provides the main flight power.<br>
+        • <strong>Motor Order (Quadcopter X-Frame):</strong> MAIN OUT 1 = Front-Right (CW), MAIN OUT 2 = Rear-Left (CW), MAIN OUT 3 = Front-Left (CCW), MAIN OUT 4 = Rear-Right (CCW). Verify with your frame manual.<br>
+        • <strong>ESC Calibration:</strong> If using PWM ESCs, calibrate them through the Pixhawk before first flight. DShot ESCs do not require calibration.<br>
+        • <strong>Telemetry:</strong> TELEM1 is typically used for the primary telemetry radio. TELEM2 can be used for a secondary radio or connected to an onboard computer (Raspberry Pi / Jetson).<br>
+        • <strong>GPS:</strong> Mount the GPS/Compass module on a mast away from magnetic interference (ESCs, high-current wires). The compass direction arrow should point toward the <strong>front</strong> of the vehicle.<br>
+        • <strong>RC Receiver:</strong> For SBUS receivers, connect to the RC IN port. For PPM receivers, connect to the same port. For Spektrum satellite receivers, use a special adapter or connect to a UART.<br>
+        • <strong>Safety:</strong> The safety switch must be pressed (LED turns solid) before arming. The buzzer provides audible arming/disarming status.<br>
+        • <strong>Firmware:</strong> Install ArduPilot (ArduCopter / ArduPlane) or PX4 Pro via <code>QGroundControl</code> or <code>Mission Planner</code>.
+    </div>
+
+    <script>
+        // Fullscreen toggle functionality
+        function toggleFullscreen() {
+            const container = document.querySelector('.diagram-container');
+            if (!document.fullscreenElement) {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Add hover effect for SVG elements via CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            .diagram-container svg g[filter="url(#shadow)"] {
+                transition: all 0.3s ease;
+            }
+            .diagram-container svg g[filter="url(#shadow)"]:hover {
+                filter: brightness(1.2);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

@@ -26,6 +26,7 @@ running = True
 # Initialize a single shared MAVBridge instance and execution pool
 bridge = MAVBridge("/dev/ttyAMA0", baud=921600)
 bridge.connect()
+logging.info("connected bridge")
 
 # Increased from max_workers=1 to avoid serial bottleneck
 executor = ThreadPoolExecutor(max_workers=4)
